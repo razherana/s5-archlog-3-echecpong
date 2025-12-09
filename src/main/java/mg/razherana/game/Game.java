@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 import mg.razherana.game.gfx.GameFrame;
@@ -15,6 +16,7 @@ import mg.razherana.game.logic.objects.ball.Ball;
 import mg.razherana.game.logic.objects.board.Board;
 import mg.razherana.game.logic.objects.board.BoardBorder;
 import mg.razherana.game.logic.objects.chesspiece.ChessPiece;
+import mg.razherana.game.logic.objects.chesspiece.ChessPieceType;
 import mg.razherana.game.logic.objects.platform.Platform;
 import mg.razherana.game.logic.players.Player;
 import mg.razherana.game.logic.utils.Assets;
@@ -29,6 +31,8 @@ public class Game {
 
   private final KeyboardAdapter keyboardAdapter = new KeyboardAdapter(this);
 
+  private volatile GameState gameState = GameState.PAUSED;
+
   // Game objects rendered in a priority queue based on their priority
   private List<GameObject> gameObjects = new ArrayList<>();
 
@@ -38,7 +42,6 @@ public class Game {
   private List<GameObject> gameObjectsToRemove = new ArrayList<>();
   private volatile boolean running = false;
 
-  private volatile boolean updating = false;
   private final Config config;
 
   private GameFrame gameFrame;
@@ -238,7 +241,10 @@ public class Game {
   }
 
   public void togglePause() {
-    this.updating = !this.updating;
+    if (gameState == GameState.PAUSED)
+      this.gameState = GameState.RUNNING;
+    else if (gameState == GameState.RUNNING)
+      this.gameState = GameState.PAUSED;
   }
 
   private void initGameObjects() {
@@ -335,8 +341,7 @@ public class Game {
 
       // Update game at fixed rate
       while (frameTime >= UPDATE_CAP) {
-        if (updating)
-          update(UPDATE_CAP); // Fixed time step
+        update(UPDATE_CAP); // Fixed time step
         frameTime -= UPDATE_CAP;
         updates++;
       }
@@ -365,27 +370,48 @@ public class Game {
   private void update(double deltaTime) {
     // Update game state (physics, AI, etc.)
     synchronized (lock) {
-      // Thread-safe state updates
-      gameObjects.forEach(obj -> {
-        if (!gameObjectsToRemove.contains(obj))
-          obj.update(deltaTime);
-      });
+      if (gameState == GameState.RUNNING) {
+        // Thread-safe state updates
+        gameObjects.forEach(obj -> {
+          if (!gameObjectsToRemove.contains(obj))
+            obj.update(deltaTime);
+        });
 
-      handleCollisions();
+        handleCollisions();
 
-      // Add new game objects
-      if (!gameObjectsToAdd.isEmpty()) {
-        gameObjects.addAll(gameObjectsToAdd);
-        gameObjectsToAdd.clear();
+        // Add new game objects
+        if (!gameObjectsToAdd.isEmpty()) {
+          gameObjects.addAll(gameObjectsToAdd);
+          gameObjectsToAdd.clear();
+        }
+
+        // Remove marked game objects
+        if (!gameObjectsToRemove.isEmpty()) {
+          gameObjects.removeAll(gameObjectsToRemove);
+          gameObjectsToRemove.clear();
+        }
+
+        sortGameObjectsByPriority();
+
+        // Check for game over condition
+        checkGameOver();
       }
+    }
+  }
 
-      // Remove marked game objects
-      if (!gameObjectsToRemove.isEmpty()) {
-        gameObjects.removeAll(gameObjectsToRemove);
-        gameObjectsToRemove.clear();
+  private void checkGameOver() {
+    for (Player player : players) {
+      if (player.getChessPieces().stream()
+          .filter(piece -> piece.getType() == ChessPieceType.KING_BLACK || piece.getType() == ChessPieceType.KING_WHITE)
+          .count() == 0) {
+        // Game over
+        SwingUtilities.invokeLater(() -> {
+          JOptionPane.showMessageDialog(gamePanel, player.getName() + " loses!", "Game Over",
+              JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        gameState = GameState.GAME_OVER;
       }
-
-      sortGameObjectsByPriority();
     }
   }
 
