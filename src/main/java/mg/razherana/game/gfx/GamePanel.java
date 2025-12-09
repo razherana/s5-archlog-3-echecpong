@@ -3,6 +3,8 @@ package mg.razherana.game.gfx;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
 import javax.swing.JPanel;
 
@@ -23,6 +25,16 @@ public class GamePanel extends JPanel {
     setFocusable(true);
     requestFocusInWindow();
 
+    addKeyListener(new KeyAdapter() {
+      @Override
+      public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+          // Toggle pause state
+          game.togglePause();
+        }
+      }
+    });
+
     setVisible(true);
   }
 
@@ -36,7 +48,8 @@ public class GamePanel extends JPanel {
 
     final InnerGamePanel inner = new InnerGamePanel();
 
-    for (GameObject obj : game.getGameObjects()) {
+    for (int i = 0; i < game.getGameObjects().size(); i++) {
+      GameObject obj = game.getGameObjects().get(i);
       if (inner.old > obj.getPriority()) {
         System.err.println("Rendering order error: object with lower priority rendered after higher priority");
       }

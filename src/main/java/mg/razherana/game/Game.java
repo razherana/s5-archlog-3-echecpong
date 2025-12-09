@@ -27,7 +27,12 @@ public class Game {
   // Game objects rendered in a priority queue based on their priority
   private List<GameObject> gameObjects = new ArrayList<>();
 
+  // Game objects to be added/removed
+  private List<GameObject> gameObjectsToAdd = new ArrayList<>();
+  private List<GameObject> gameObjectsToRemove = new ArrayList<>();
+
   private volatile boolean running = false;
+  private volatile boolean updating = false;
 
   private final Config config;
 
@@ -37,7 +42,7 @@ public class Game {
   private final Assets assets = new Assets();
 
   // Timing variables
-  private final double TARGET_FPS = 60.0;
+  private final double TARGET_FPS = 144.0;
 
   private final double UPDATE_CAP = 1.0 / TARGET_FPS; // 60 updates/sec
 
@@ -99,15 +104,13 @@ public class Game {
 
   public void addGameObject(GameObject obj) {
     synchronized (lock) {
-      gameObjects.add(obj);
-      gameObjects.sort((a, b) -> Integer.compare(a.getPriority(), b.getPriority()));
+      gameObjectsToAdd.add(obj);
     }
   }
 
   public void removeGameObject(GameObject obj) {
     synchronized (lock) {
-      gameObjects.remove(obj);
-      gameObjects.sort((a, b) -> Integer.compare(a.getPriority(), b.getPriority()));
+      gameObjectsToRemove.add(obj);
     }
   }
 
@@ -175,7 +178,10 @@ public class Game {
     BoardBorder boardBorder = new BoardBorder(this, board);
 
     // Create ball
-    Ball ball = new Ball(this, new Vector2(board.getSize().x / 2 - Ball.RADIUS, board.getSize().y / 2 - Ball.RADIUS));
+    Ball ball = new Ball(this,
+        new Vector2(board.getSize().x / 2 - Ball.RADIUS, board.getSize().y / 2 - Ball.RADIUS),
+        Float.parseFloat(config.getProperty(Config.Key.BALL_DAMAGE)),
+        Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED)));
 
     List<ChessPiece> chessPieces1 = ChessPiece.initDefaultPieces(this, player1, 1);
     List<ChessPiece> chessPieces2 = ChessPiece.initDefaultPieces(this, player2, 2);
@@ -198,7 +204,8 @@ public class Game {
     // Add ball to game objects
     // We addGameObject at the end to ensure it has the highest priority and only
     // run it at the end for performance
-    addGameObject(ball);
+    gameObjects.add(ball);
+    sortGameObjectsByPriority();
 
     // Add players to the game
     players.add(player1);
@@ -237,7 +244,8 @@ public class Game {
 
       // Update game at fixed rate
       while (frameTime >= UPDATE_CAP) {
-        update(UPDATE_CAP); // Fixed time step
+        if (updating)
+          update(UPDATE_CAP); // Fixed time step
         frameTime -= UPDATE_CAP;
         updates++;
       }
@@ -268,10 +276,25 @@ public class Game {
     synchronized (lock) {
       // Thread-safe state updates
       gameObjects.forEach(obj -> {
-        obj.update(deltaTime);
+        if (!gameObjectsToRemove.contains(obj))
+          obj.update(deltaTime);
       });
 
       handleCollisions();
+
+      // Add new game objects
+      if (!gameObjectsToAdd.isEmpty()) {
+        gameObjects.addAll(gameObjectsToAdd);
+        gameObjectsToAdd.clear();
+      }
+
+      // Remove marked game objects
+      if (!gameObjectsToRemove.isEmpty()) {
+        gameObjects.removeAll(gameObjectsToRemove);
+        gameObjectsToRemove.clear();
+      }
+
+      sortGameObjectsByPriority();
     }
   }
 
@@ -281,8 +304,17 @@ public class Game {
 
     for (int i = 0; i < size; i++) {
       GameObject objA = objects.get(i);
+
+      // Skip if object is marked for removal
+      if (gameObjectsToRemove.contains(objA))
+        continue;
+
       for (int j = i + 1; j < size; j++) {
         GameObject objB = objects.get(j);
+
+        // Skip if object is marked for removal
+        if (gameObjectsToRemove.contains(objB))
+          continue;
 
         if (objA.isCollidingWith(objB) && objB.isCollidingWith(objA)) {
           objA.onCollision(objB);
@@ -297,5 +329,79 @@ public class Game {
     SwingUtilities.invokeLater(() -> {
       gamePanel.repaint();
     });
+  }
+
+  /**
+   * @return the objectsToAdd
+   */
+  public List<GameObject> getGameObjectsToAdd() {
+    return gameObjectsToAdd;
+  }
+
+  /**
+   * @param objectsToAdd the objectsToAdd to set
+   */
+  public void setGameObjectsToAdd(List<GameObject> objectsToAdd) {
+    this.gameObjectsToAdd = objectsToAdd;
+  }
+
+  /**
+   * @return the objectsToRemove
+   */
+  public List<GameObject> getGameObjectsToRemove() {
+    return gameObjectsToRemove;
+  }
+
+  /**
+   * @param objectsToRemove the objectsToRemove to set
+   */
+  public void setGameObjectsToRemove(List<GameObject> objectsToRemove) {
+    this.gameObjectsToRemove = objectsToRemove;
+  }
+
+  /**
+   * @return the running
+   */
+  public boolean isRunning() {
+    return running;
+  }
+
+  /**
+   * @param running the running to set
+   */
+  public void setRunning(boolean running) {
+    this.running = running;
+  }
+
+  /**
+   * @return the tARGET_FPS
+   */
+  public double getTARGET_FPS() {
+    return TARGET_FPS;
+  }
+
+  /**
+   * @return the uPDATE_CAP
+   */
+  public double getUPDATE_CAP() {
+    return UPDATE_CAP;
+  }
+
+  /**
+   * @return the lock
+   */
+  public Object getLock() {
+    return lock;
+  }
+
+  /**
+   * @param players the players to set
+   */
+  public void setPlayers(List<Player> players) {
+    this.players = players;
+  }
+
+  public void togglePause() {
+    this.updating = !this.updating;
   }
 }

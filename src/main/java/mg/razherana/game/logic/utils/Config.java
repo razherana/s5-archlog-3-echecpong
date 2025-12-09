@@ -7,11 +7,11 @@ public class Config {
   private final Properties properties;
 
   public enum Key {
-    IS_SERVER;
+    IS_SERVER, BALL_DAMAGE, BALL_SPEED;
   }
 
   public String getProperty(Key key) {
-    return properties.getProperty(key.name().toLowerCase());
+    return properties.getProperty(key.name().toUpperCase());
   }
 
   public Config() throws IOException {

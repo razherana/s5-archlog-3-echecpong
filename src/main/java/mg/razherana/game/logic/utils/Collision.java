@@ -67,12 +67,13 @@ public class Collision {
       newVx = -vx1; // reflect horizontally
 
       if (dx > 0) {
-        // rect1 hit rect2 from the right
-        correctedX += overlapX;
+        // rect1 hit rect2 from the left
+        System.out.println("[Collision/Border] : LEFT COLLISION DETECTED");
+        System.out.println("[Collision/Border] : overlapX = " + overlapX+", dx = " + dx);
+
         side = "LEFT";
       } else {
-        // rect1 hit rect2 from the left
-        correctedX -= overlapX;
+        // rect1 hit rect2 from the right
         side = "RIGHT";
       }
     } else {
@@ -81,11 +82,11 @@ public class Collision {
 
       if (dy < 0) {
         // rect1 hit rect2 from below
-        correctedY += overlapY;
+        correctedY -= overlapY;
         side = "TOP";
       } else {
         // rect1 hit rect2 from above
-        correctedY -= overlapY;
+        correctedY += overlapY;
         side = "BOTTOM";
       }
     }
