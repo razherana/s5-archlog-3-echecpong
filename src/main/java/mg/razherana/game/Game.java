@@ -111,6 +111,12 @@ public class Game {
     }
   }
 
+  public void sortGameObjectsByPriority() {
+    synchronized (lock) {
+      gameObjects.sort((a, b) -> Integer.compare(a.getPriority(), b.getPriority()));
+    }
+  }
+
   /**
    * @return the gameObjects
    */
