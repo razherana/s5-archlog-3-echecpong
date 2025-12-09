@@ -7,7 +7,7 @@ public class Config {
   private final Properties properties;
 
   public enum Key {
-    IS_SERVER, BALL_DAMAGE, BALL_SPEED_X, BALL_SPEED_Y;
+    IS_SERVER, BALL_DAMAGE, BALL_SPEED_X, BALL_SPEED_Y, PLATFORM_WIDTH, PLATFORM_HEIGHT;
   }
 
   public String getProperty(Key key) {

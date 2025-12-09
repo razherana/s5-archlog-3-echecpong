@@ -1,5 +1,6 @@
 package mg.razherana.game;
 
+import java.awt.Color;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +14,7 @@ import mg.razherana.game.logic.objects.ball.Ball;
 import mg.razherana.game.logic.objects.board.Board;
 import mg.razherana.game.logic.objects.board.BoardBorder;
 import mg.razherana.game.logic.objects.chesspiece.ChessPiece;
+import mg.razherana.game.logic.objects.platform.Platform;
 import mg.razherana.game.logic.players.Player;
 import mg.razherana.game.logic.utils.Assets;
 import mg.razherana.game.logic.utils.Config;
@@ -170,8 +172,8 @@ public class Game {
 
   private void initGameObjects() {
     // Init players
-    Player player1 = new Player("Player 1", new ArrayList<>());
-    Player player2 = new Player("Player 2", new ArrayList<>());
+    Player player1 = new Player("Player 1", new Color(0x596070), new Color(0x96a2b3), new ArrayList<>());
+    Player player2 = new Player("Player 2", new Color(0x96a2b3), new Color(0x596070), new ArrayList<>());
 
     // Init board
     Board board = new Board(8, 8, this);
@@ -181,7 +183,8 @@ public class Game {
     Ball ball = new Ball(this,
         new Vector2(board.getSize().x / 2 - Ball.RADIUS, board.getSize().y / 2 - Ball.RADIUS),
         Float.parseFloat(config.getProperty(Config.Key.BALL_DAMAGE)),
-        Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED_X)), Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED_Y)));
+        Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED_X)),
+        Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED_Y)));
 
     List<ChessPiece> chessPieces1 = ChessPiece.initDefaultPieces(this, player1, 1);
     List<ChessPiece> chessPieces2 = ChessPiece.initDefaultPieces(this, player2, 2);
@@ -201,10 +204,22 @@ public class Game {
       player2.getChessPieces().add(piece);
     });
 
+    // Add platforms
+    Platform platform1 = new Platform(this, new Vector2(220, 430), player1,
+        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_WIDTH)),
+        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_HEIGHT)));
+
+    Platform platform2 = new Platform(this, new Vector2(220, 185), player2,
+        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_WIDTH)),
+        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_HEIGHT)));
+
+    // Add to game
+    gameObjects.add(platform1);
+    gameObjects.add(platform2);
+
     // Add ball to game objects
-    // We addGameObject at the end to ensure it has the highest priority and only
-    // run it at the end for performance
     gameObjects.add(ball);
+
     sortGameObjectsByPriority();
 
     // Add players to the game

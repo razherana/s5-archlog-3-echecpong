@@ -8,6 +8,7 @@ import mg.razherana.game.Game;
 import mg.razherana.game.logic.GameObject;
 import mg.razherana.game.logic.objects.board.BoardBorder;
 import mg.razherana.game.logic.objects.chesspiece.ChessPiece;
+import mg.razherana.game.logic.objects.platform.Platform;
 import mg.razherana.game.logic.utils.Vector2;
 import mg.razherana.game.logic.utils.Collision;
 import mg.razherana.game.logic.utils.Collision.CollisionSidesResult;
@@ -180,14 +181,40 @@ public class Ball extends GameObject {
       }
     }
 
-    // Add random to make the ball less predictable
-    float randomFactorX = (float) (0.3 + Math.random()); // Random value between 0.8 and 1.8
-    float randomFactorY = (float) (0.3 + Math.random()); // Random value between 0.8 and 1.8
+    // Check if platform
+    else if (other instanceof Platform) {
+      // Reflect velocity based on collision sides
+      CollisionSidesResult sides = Collision.collideSides(
+          thisBounds,
+          velocity.x, velocity.y,
+          new Rectangle2D.Float(other.getPosition().x, other.getPosition().y, other.getSize().x, other.getSize().y),
+          0, 0);
 
-    System.out.println("[Ball/Collision/RandomFactor]  Random factors: " + randomFactorX + ", " + randomFactorY);
+      if (!sides.collided())
+        return;
 
-    velocity.x = baseVelocity.x * randomFactorX;
-    velocity.y = baseVelocity.y * randomFactorY;
+      // Correct position
+      setPosition(new Vector2(sides.correctedX(), sides.correctedY()));
+
+      if (sides.top() || sides.bottom()) {
+        velocity.y = -velocity.y;
+        baseVelocity.y = -baseVelocity.y;
+      }
+
+      if (sides.left() || sides.right()) {
+        velocity.x = -velocity.x;
+        baseVelocity.x = -baseVelocity.x;
+      }
+
+      // Add random to make the ball less predictable
+      float randomFactorX = (float) (0.3 + Math.random()); // Random value between 0.8 and 1.8
+      float randomFactorY = (float) (0.3 + Math.random()); // Random value between 0.8 and 1.8
+
+      System.out.println("[Ball/Collision/RandomFactor] Random factors: " + randomFactorX + ", " + randomFactorY);
+
+      velocity.x = baseVelocity.x * randomFactorX;
+      velocity.y = baseVelocity.y * randomFactorY;
+    }
   }
 
 }

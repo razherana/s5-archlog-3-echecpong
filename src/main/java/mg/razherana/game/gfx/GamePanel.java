@@ -5,6 +5,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 import javax.swing.JPanel;
 
@@ -37,6 +39,18 @@ public class GamePanel extends JPanel {
       }
     });
 
+    addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseClicked(MouseEvent e) {
+        var point = e.getPoint();
+
+        point.x -= origin.x;
+        point.y -= origin.y;
+
+        System.out.println("[Debug/Mouse] : Clicked on " + point);
+      }
+    });
+
     setVisible(true);
   }
 
@@ -48,7 +62,9 @@ public class GamePanel extends JPanel {
       GameObject obj = game.getGameObjects().get(i);
 
       Graphics2D g2d = (Graphics2D) g.create();
+
       g2d.translate(origin.x, origin.y);
+
       obj.render(g2d);
 
       // Dispose the graphics context to free up resources
