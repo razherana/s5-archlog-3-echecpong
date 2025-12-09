@@ -38,7 +38,39 @@ public class Assets {
         null);
   }
 
+  public static void drawAnimationImageTile(int tilesize,
+      int ximg, int yimg,
+      int x, int y, int w, int h,
+      Graphics2D g2d,
+      BufferedImage spriteSheet) {
+    drawAnimationImageTile(tilesize, ximg, yimg, x, y, w, h, g2d, spriteSheet, 0, 0, 0, 0);
+  }
+
+  public static void drawAnimationImageTile(int tilesize,
+      int ximg, int yimg,
+      int x, int y, int w, int h,
+      Graphics2D g2d,
+      BufferedImage spriteSheet,
+      int marginX1, int marginY1, int marginX2, int marginY2) {
+    int sx1 = ximg * tilesize + marginX1;
+    int sy1 = yimg * tilesize + marginY1;
+    int sx2 = sx1 + tilesize + marginX2;
+    int sy2 = sy1 + tilesize + marginY2;
+
+    int dx1 = x;
+    int dy1 = y;
+    int dx2 = x + w;
+    int dy2 = y + h;
+
+    g2d.drawImage(
+        spriteSheet,
+        dx1, dy1, dx2, dy2,
+        sx1, sy1, sx2, sy2,
+        null);
+  }
+
   private BufferedImage chessPieceSpriteSheet = null;
+  private BufferedImage ballSpriteSheet = null;
 
   /**
    * @return the chessPieceSpriteSheet
@@ -52,5 +84,19 @@ public class Assets {
    */
   public void setChessPieceSpriteSheet(BufferedImage chessPieceSpriteSheet) {
     this.chessPieceSpriteSheet = chessPieceSpriteSheet;
+  }
+
+  /**
+   * @return the ballSpriteSheet
+   */
+  public BufferedImage getBallSpriteSheet() {
+    return ballSpriteSheet;
+  }
+
+  /**
+   * @param ballSpriteSheet the ballSpriteSheet to set
+   */
+  public void setBallSpriteSheet(BufferedImage ballSpriteSheet) {
+    this.ballSpriteSheet = ballSpriteSheet;
   }
 }

@@ -216,6 +216,7 @@ public class Game {
     // Load game assets (images, sounds, etc.)
 
     assets.setChessPieceSpriteSheet(Assets.loadImage("/sprites/chesspieces.png"));
+    assets.setBallSpriteSheet(Assets.loadImage("/sprites/ball.png"));
   }
 
   private void run() {
