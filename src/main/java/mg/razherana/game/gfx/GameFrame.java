@@ -15,7 +15,7 @@ public class GameFrame extends JFrame {
     this.game = game;
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setResizable(true);
-    setSize(1280, 720);
+    setSize(1280, 1000);
     setLocationRelativeTo(null);
 
     getContentPane().setBackground(new Color(0x00000011));

@@ -9,6 +9,7 @@ import mg.razherana.game.logic.utils.Vector2;
 public abstract class GameObject {
   private Vector2 position;
   private Vector2 size = new Vector2(80, 80); // Default size, can be overridden
+  private boolean collision = true;
 
   private final Game game;
 
@@ -54,6 +55,7 @@ public abstract class GameObject {
    */
   public void onCollision(GameObject other) {
     // Default implementation does nothing
+    System.out.println("[Collision] " + this + " colliding with " + other);
   }
 
   public boolean isCollidingWith(GameObject other) {
@@ -97,7 +99,21 @@ public abstract class GameObject {
     this.size = size;
   }
 
-  public Rectangle2D getDefaultBounds() {
-    return new Rectangle2D.Double(position.x, position.y, size.x, size.y);
+  public Rectangle2D.Float getDefaultBounds() {
+    return new Rectangle2D.Float(position.x, position.y, size.x, size.y);
+  }
+
+  /**
+   * @return the collision
+   */
+  public boolean isCollision() {
+    return collision;
+  }
+
+  /**
+   * @param collision the collision to set
+   */
+  public void setCollision(boolean collision) {
+    this.collision = collision;
   }
 }

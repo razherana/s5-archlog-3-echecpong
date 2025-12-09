@@ -76,8 +76,12 @@ public class ChessPiece extends GameObject {
       this.lifeMax = 1f;
     }
 
+    float posY = position.y - UILifeFade.HEIGHT - 5;
+    if (posY < 0)
+      posY = position.y + getSize().y + 5;
+
     lifeFade = new UILifeFade(game,
-        new Vector2(position.x, position.y - UILifeFade.HEIGHT - 5),
+        new Vector2(position.x, posY),
         new Vector2(TILE, UILifeFade.HEIGHT),
         1.0f,
         1.0f);
@@ -135,8 +139,12 @@ public class ChessPiece extends GameObject {
       if (lifeFade != null)
         getGame().removeGameObject(lifeFade);
 
+      float posY = getPosition().y - UILifeFade.HEIGHT - 5;
+      if (posY < 0)
+        posY = getPosition().y + getSize().y + 5;
+
       lifeFade = new UILifeFade(getGame(),
-          new Vector2(getPosition().x, getPosition().y - UILifeFade.HEIGHT - 5),
+          new Vector2(getPosition().x, posY),
           new Vector2(TILE, UILifeFade.HEIGHT),
           3f,
           0f);
@@ -148,8 +156,13 @@ public class ChessPiece extends GameObject {
       player.getChessPieces().remove(this);
     } else {
       // Update life fade percentage and reset lifetime
+
+      float posY = getPosition().y - UILifeFade.HEIGHT - 5;
+      if (posY < 0)
+        posY = getPosition().y + getSize().y + 5;
+
       lifeFade = new UILifeFade(getGame(),
-          new Vector2(getPosition().x, getPosition().y - UILifeFade.HEIGHT - 5),
+          new Vector2(getPosition().x, posY),
           new Vector2(TILE, UILifeFade.HEIGHT),
           3f,
           life / lifeMax);

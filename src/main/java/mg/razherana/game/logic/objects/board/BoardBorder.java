@@ -38,23 +38,26 @@ public class BoardBorder extends GameObject {
     g2d.drawRect(0 - (int) BORDER_THICKNESS, 0 - (int) BORDER_THICKNESS, (int) sizeRender.x, (int) sizeRender.y);
 
     // Debug collision borders
-    // for (Rectangle2D.Float border : getBorders()) {
-    //   g2d.draw(border);
-    // }
+    for (Rectangle2D.Float border : getBorders()) {
+      g2d.draw(border);
+    }
   }
 
   @Override
   public boolean isCollidingWith(GameObject other) {
+    var otherBounds = other.getDefaultBounds();
+
     Rectangle2D.Float[] borders = getBorders();
+
     for (Rectangle2D.Float border : borders) {
-      if (border.intersects(other.getDefaultBounds())) {
+      if (border.intersects(otherBounds)) {
         return true;
       }
     }
     return false;
   }
 
-  private Rectangle2D.Float[] getBorders() {
+  public Rectangle2D.Float[] getBorders() {
     return new Rectangle2D.Float[] {
         // Top border
         new Rectangle2D.Float(0, -BORDER_THICKNESS_FOR_COLLISION, board.getSize().x, BORDER_THICKNESS_FOR_COLLISION),

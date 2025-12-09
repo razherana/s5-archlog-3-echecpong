@@ -307,17 +307,20 @@ public class Game {
       GameObject objA = objects.get(i);
 
       // Skip if object is marked for removal
-      if (gameObjectsToRemove.contains(objA))
+      if (gameObjectsToRemove.contains(objA) || !objA.isCollision())
         continue;
 
       for (int j = i + 1; j < size; j++) {
         GameObject objB = objects.get(j);
 
+        if (i == j || objA == objB || !objB.isCollision())
+          continue;
+
         // Skip if object is marked for removal
         if (gameObjectsToRemove.contains(objB))
           continue;
 
-        if (objA.isCollidingWith(objB) && objB.isCollidingWith(objA)) {
+        if (objA.isCollidingWith(objB) && objB.isCollidingWith(objA) && objA != objB) {
           objA.onCollision(objB);
           objB.onCollision(objA);
         }
@@ -372,27 +375,6 @@ public class Game {
    */
   public void setRunning(boolean running) {
     this.running = running;
-  }
-
-  /**
-   * @return the tARGET_FPS
-   */
-  public double getTARGET_FPS() {
-    return TARGET_FPS;
-  }
-
-  /**
-   * @return the uPDATE_CAP
-   */
-  public double getUPDATE_CAP() {
-    return UPDATE_CAP;
-  }
-
-  /**
-   * @return the lock
-   */
-  public Object getLock() {
-    return lock;
   }
 
   /**

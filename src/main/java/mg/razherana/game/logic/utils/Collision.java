@@ -28,6 +28,8 @@ public class Collision {
     }
   }
 
+  static float EPSILON = 10f;
+
   /**
    * Detects collision between two rectangles and resolves it.
    *
@@ -68,13 +70,10 @@ public class Collision {
 
       if (dx > 0) {
         // rect1 hit rect2 from the left
-        System.out.println("[Collision/Border] : LEFT COLLISION DETECTED");
-        System.out.println("[Collision/Border] : overlapX = " + overlapX+", dx = " + dx);
-
-        side = "LEFT";
+        side = "RIGHT";
       } else {
         // rect1 hit rect2 from the right
-        side = "RIGHT";
+        side = "LEFT";
       }
     } else {
       // Vertical collision
@@ -82,13 +81,25 @@ public class Collision {
 
       if (dy < 0) {
         // rect1 hit rect2 from below
-        correctedY -= overlapY;
         side = "TOP";
       } else {
         // rect1 hit rect2 from above
-        correctedY += overlapY;
         side = "BOTTOM";
       }
+    }
+
+    if (side.equals("LEFT")) {
+      // If collided from left, move rect1 to the left of rect2
+      correctedX = rect2.x - rect1.width - EPSILON;
+    } else if (side.equals("RIGHT")) {
+      // If collided from right, move rect1 to the right of rect2
+      correctedX = rect2.x + rect2.width + EPSILON;
+    } else if (side.equals("TOP")) {
+      // If collided from top, move rect1 above rect2
+      correctedY = rect2.y - rect1.height - EPSILON;
+    } else if (side.equals("BOTTOM")) {
+      // If collided from bottom, move rect1 below rect2
+      correctedY = rect2.y + rect2.height + EPSILON;
     }
 
     return new CollisionSidesResult(true, side, correctedX, correctedY, newVx, newVy);

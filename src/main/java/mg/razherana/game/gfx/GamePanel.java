@@ -10,9 +10,11 @@ import javax.swing.JPanel;
 
 import mg.razherana.game.Game;
 import mg.razherana.game.logic.GameObject;
+import mg.razherana.game.logic.utils.Vector2;
 
 public class GamePanel extends JPanel {
   private final Game game;
+  private Vector2 origin = new Vector2(300, 150);
 
   public GamePanel(Game game) {
     // Sets the panel to be double buffered
@@ -42,21 +44,11 @@ public class GamePanel extends JPanel {
   protected void paintComponent(Graphics g) {
     super.paintComponent(g);
 
-    class InnerGamePanel {
-      int old = -999;
-    }
-
-    final InnerGamePanel inner = new InnerGamePanel();
-
     for (int i = 0; i < game.getGameObjects().size(); i++) {
       GameObject obj = game.getGameObjects().get(i);
-      if (inner.old > obj.getPriority()) {
-        System.err.println("Rendering order error: object with lower priority rendered after higher priority");
-      }
-
-      inner.old = obj.getPriority();
 
       Graphics2D g2d = (Graphics2D) g.create();
+      g2d.translate(origin.x, origin.y);
       obj.render(g2d);
 
       // Dispose the graphics context to free up resources

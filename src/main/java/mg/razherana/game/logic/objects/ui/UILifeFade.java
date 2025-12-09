@@ -24,6 +24,7 @@ public class UILifeFade extends GameObject {
     this.lifetime = lifetime;
     this.percentage = percentage;
 
+    setCollision(false);
     setSize(size);
   }
 

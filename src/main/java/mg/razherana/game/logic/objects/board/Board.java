@@ -21,6 +21,7 @@ public class Board extends GameObject {
 
   public Board(int col, int row, Game game) {
     super(game, new Vector2(0, 0), 0);
+    setCollision(false);
     this.width = col * TILE;
     this.height = row * TILE;
     this.col = col;
