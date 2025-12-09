@@ -1,12 +1,14 @@
 package mg.razherana.game.logic;
 
 import java.awt.Graphics2D;
+import java.awt.geom.Rectangle2D;
 
 import mg.razherana.game.Game;
 import mg.razherana.game.logic.utils.Vector2;
 
 public abstract class GameObject {
   private Vector2 position;
+  private Vector2 size = new Vector2(80, 80); // Default size, can be overridden
 
   private final Game game;
 
@@ -46,6 +48,28 @@ public abstract class GameObject {
   public abstract void render(Graphics2D g2d);
 
   /**
+   * Handle collision with another game object.
+   * 
+   * @param other
+   */
+  public void onCollision(GameObject other) {
+    // Default implementation does nothing
+  }
+
+  public boolean isCollidingWith(GameObject other) {
+    // Use Rect2D for collision detection
+    Rectangle2D.Double rectA = new Rectangle2D.Double(
+        this.getPosition().x, this.getPosition().y,
+        this.getSize().x, this.getSize().y);
+
+    Rectangle2D.Double rectB = new Rectangle2D.Double(
+        other.getPosition().x, other.getPosition().y,
+        other.getSize().x, other.getSize().y);
+
+    return rectA.intersects(rectB);
+  }
+
+  /**
    * @return the position
    */
   public Vector2 getPosition() {
@@ -57,5 +81,23 @@ public abstract class GameObject {
    */
   public void setPosition(Vector2 position) {
     this.position = position;
+  }
+
+  /**
+   * @return the size
+   */
+  public Vector2 getSize() {
+    return size;
+  }
+
+  /**
+   * @param size the size to set
+   */
+  public void setSize(Vector2 size) {
+    this.size = size;
+  }
+
+  public Rectangle2D getDefaultBounds() {
+    return new Rectangle2D.Double(position.x, position.y, size.x, size.y);
   }
 }

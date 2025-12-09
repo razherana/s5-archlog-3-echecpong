@@ -59,6 +59,8 @@ public class ChessPiece extends GameObject {
     super(game, position, 1);
     this.player = player;
     this.type = type;
+    
+    setSize(new Vector2(TILE, TILE));
   }
 
   @Override

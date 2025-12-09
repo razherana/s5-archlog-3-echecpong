@@ -25,6 +25,8 @@ public class Board extends GameObject {
     this.height = row * TILE;
     this.col = col;
     this.row = row;
+
+    setSize(new Vector2(width, height));
   }
 
   @Override
@@ -36,7 +38,7 @@ public class Board extends GameObject {
   public void render(Graphics2D g2d) {
     // Render the board
     g2d.setColor(Color.LIGHT_GRAY);
-    g2d.fillRect(0, 0, width, height);
+    g2d.fillRect(0, 0, (int) getSize().x, (int) getSize().y);
 
     // Draw the grid
     for (int i = 0, c = 0; i < col; i++) {

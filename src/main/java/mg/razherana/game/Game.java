@@ -3,18 +3,20 @@ package mg.razherana.game;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.PriorityQueue;
 
 import javax.swing.SwingUtilities;
 
 import mg.razherana.game.gfx.GameFrame;
 import mg.razherana.game.gfx.GamePanel;
 import mg.razherana.game.logic.GameObject;
+import mg.razherana.game.logic.objects.ball.Ball;
 import mg.razherana.game.logic.objects.board.Board;
+import mg.razherana.game.logic.objects.board.BoardBorder;
 import mg.razherana.game.logic.objects.chesspiece.ChessPiece;
 import mg.razherana.game.logic.players.Player;
 import mg.razherana.game.logic.utils.Assets;
 import mg.razherana.game.logic.utils.Config;
+import mg.razherana.game.logic.utils.Vector2;
 
 /**
  * Contains the game instance and logic.
@@ -23,9 +25,7 @@ public class Game {
   private Thread gameThread;
 
   // Game objects rendered in a priority queue based on their priority
-  private PriorityQueue<GameObject> gameObjects = new PriorityQueue<>((a, b) -> {
-    return Integer.compare(a.getPriority(), b.getPriority());
-  });
+  private List<GameObject> gameObjects = new ArrayList<>();
 
   private volatile boolean running = false;
 
@@ -43,8 +43,6 @@ public class Game {
 
   private final Object lock = new Object();
   private List<Player> players = new ArrayList<>();
-
-  private int currentPlayerIndex = 0;
 
   public Game() {
     // Init config
@@ -78,14 +76,6 @@ public class Game {
     return players;
   }
 
-  public Player getCurrentPlayer() {
-    return players.get(currentPlayerIndex);
-  }
-
-  public void nextTurn() {
-    currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
-  }
-
   /**
    * @return the assets
    */
@@ -107,10 +97,24 @@ public class Game {
     this.gameThread = gameThread;
   }
 
+  public void addGameObject(GameObject obj) {
+    synchronized (lock) {
+      gameObjects.add(obj);
+      gameObjects.sort((a, b) -> Integer.compare(a.getPriority(), b.getPriority()));
+    }
+  }
+
+  public void removeGameObject(GameObject obj) {
+    synchronized (lock) {
+      gameObjects.remove(obj);
+      gameObjects.sort((a, b) -> Integer.compare(a.getPriority(), b.getPriority()));
+    }
+  }
+
   /**
    * @return the gameObjects
    */
-  public PriorityQueue<GameObject> getGameObjects() {
+  public List<GameObject> getGameObjects() {
     return gameObjects;
   }
 
@@ -123,7 +127,7 @@ public class Game {
   /**
    * @param gameObjects the gameObjects to set
    */
-  public void setGameObjects(PriorityQueue<GameObject> gameObjects) {
+  public void setGameObjects(List<GameObject> gameObjects) {
     this.gameObjects = gameObjects;
   }
 
@@ -162,11 +166,16 @@ public class Game {
 
     // Init board
     Board board = new Board(8, 8, this);
+    BoardBorder boardBorder = new BoardBorder(this, board);
+
+    // Create ball
+    Ball ball = new Ball(this, new Vector2(board.getSize().x / 2 - Ball.RADIUS, board.getSize().y / 2 - Ball.RADIUS));
 
     List<ChessPiece> chessPieces1 = ChessPiece.initDefaultPieces(this, player1, 1);
     List<ChessPiece> chessPieces2 = ChessPiece.initDefaultPieces(this, player2, 2);
 
     // Add board to game objects
+    gameObjects.add(boardBorder);
     gameObjects.add(board);
 
     // Add chess pieces to game objects and assign to players
@@ -179,6 +188,11 @@ public class Game {
       gameObjects.add(piece);
       player2.getChessPieces().add(piece);
     });
+
+    // Add ball to game objects
+    // We addGameObject at the end to ensure it has the highest priority and only
+    // run it at the end for performance
+    addGameObject(ball);
 
     // Add players to the game
     players.add(player1);
@@ -250,6 +264,25 @@ public class Game {
       gameObjects.forEach(obj -> {
         obj.update(deltaTime);
       });
+
+      handleCollisions();
+    }
+  }
+
+  private void handleCollisions() {
+    List<GameObject> objects = new ArrayList<>(gameObjects);
+    int size = objects.size();
+
+    for (int i = 0; i < size; i++) {
+      GameObject objA = objects.get(i);
+      for (int j = i + 1; j < size; j++) {
+        GameObject objB = objects.get(j);
+
+        if (objA.isCollidingWith(objB) && objB.isCollidingWith(objA)) {
+          objA.onCollision(objB);
+          objB.onCollision(objA);
+        }
+      }
     }
   }
 
