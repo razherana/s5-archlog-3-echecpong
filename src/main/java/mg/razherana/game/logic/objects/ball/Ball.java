@@ -17,6 +17,7 @@ public class Ball extends GameObject {
   public static final float DIAMETER = RADIUS * 2;
 
   Vector2 velocity = new Vector2(0, 0);
+  Vector2 baseVelocity;
   float damage = 1f;
 
   // Animation details
@@ -26,10 +27,11 @@ public class Ball extends GameObject {
 
   static final float ANIMATION_FRAME_DURATION = 0.05f; // Duration of each frame in seconds
 
-  public Ball(Game game, Vector2 position, float damage, float speed) {
+  public Ball(Game game, Vector2 position, float damage, float speedX, float speedY) {
     super(game, position, 2);
     this.damage = damage;
-    this.velocity = new Vector2(speed * 1.5f, speed);
+    this.velocity = new Vector2(speedX, speedY);
+    this.baseVelocity = new Vector2(speedX, speedY);
 
     setSize(new Vector2(RADIUS * 2, RADIUS * 2));
   }
@@ -101,6 +103,7 @@ public class Ball extends GameObject {
   @Override
   public void onCollision(GameObject other) {
     super.onCollision(other);
+
     var thisBounds = getDefaultBounds();
 
     // Check if the other object is a BoardBorder
@@ -131,17 +134,20 @@ public class Ball extends GameObject {
       if (!sides.collided())
         return;
 
-      // rest = new Ellipse2D.Float(getPosition().x, getPosition().y, getSize().x, getSize().y);
+      // rest = new Ellipse2D.Float(getPosition().x, getPosition().y, getSize().x,
+      // getSize().y);
 
       // Correct position
       setPosition(new Vector2(sides.correctedX(), sides.correctedY()));
 
       if (sides.top() || sides.bottom()) {
         velocity.y = -velocity.y;
+        baseVelocity.y = -baseVelocity.y;
       }
 
       if (sides.left() || sides.right()) {
         velocity.x = -velocity.x;
+        baseVelocity.x = -baseVelocity.x;
       }
     }
 
@@ -165,12 +171,23 @@ public class Ball extends GameObject {
 
       if (sides.top() || sides.bottom()) {
         velocity.y = -velocity.y;
+        baseVelocity.y = -baseVelocity.y;
       }
 
       if (sides.left() || sides.right()) {
         velocity.x = -velocity.x;
+        baseVelocity.x = -baseVelocity.x;
       }
     }
+
+    // Add random to make the ball less predictable
+    float randomFactorX = (float) (0.3 + Math.random()); // Random value between 0.8 and 1.8
+    float randomFactorY = (float) (0.3 + Math.random()); // Random value between 0.8 and 1.8
+
+    System.out.println("[Ball/Collision/RandomFactor]  Random factors: " + randomFactorX + ", " + randomFactorY);
+
+    velocity.x = baseVelocity.x * randomFactorX;
+    velocity.y = baseVelocity.y * randomFactorY;
   }
 
 }

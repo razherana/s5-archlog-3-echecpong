@@ -28,7 +28,7 @@ public class Collision {
     }
   }
 
-  static float EPSILON = 10f;
+  static float EPSILON = 0.0001f;
 
   /**
    * Detects collision between two rectangles and resolves it.

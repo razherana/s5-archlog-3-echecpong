@@ -181,7 +181,7 @@ public class Game {
     Ball ball = new Ball(this,
         new Vector2(board.getSize().x / 2 - Ball.RADIUS, board.getSize().y / 2 - Ball.RADIUS),
         Float.parseFloat(config.getProperty(Config.Key.BALL_DAMAGE)),
-        Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED)));
+        Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED_X)), Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED_Y)));
 
     List<ChessPiece> chessPieces1 = ChessPiece.initDefaultPieces(this, player1, 1);
     List<ChessPiece> chessPieces2 = ChessPiece.initDefaultPieces(this, player2, 2);
