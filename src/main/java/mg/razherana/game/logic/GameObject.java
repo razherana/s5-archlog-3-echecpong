@@ -4,6 +4,8 @@ import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
 
 import mg.razherana.game.Game;
+import mg.razherana.game.logic.listeners.GameKeyListener;
+import mg.razherana.game.logic.listeners.KeyboardAdapter;
 import mg.razherana.game.logic.utils.Vector2;
 
 public abstract class GameObject {
@@ -37,6 +39,22 @@ public abstract class GameObject {
     this.position = position;
     this.game = game;
     this.priority = priority;
+
+    registerListeners();
+  }
+
+  private void registerListeners() {
+    getGame().getKeyboardAdapter().addListener(new GameKeyListener() {
+      @Override
+      public void onKeyPressed(int keyCode, KeyboardAdapter keyboardAdapter) {
+        GameObject.this.onKeyPressed(keyCode, keyboardAdapter);
+      }
+
+      @Override
+      public void onKeyReleased(int keyCode, KeyboardAdapter keyboardAdapter) {
+        GameObject.this.onKeyReleased(keyCode, keyboardAdapter);
+      }
+    });
   }
 
   public abstract void update(double deltaTime);
@@ -56,6 +74,28 @@ public abstract class GameObject {
   public void onCollision(GameObject other) {
     // Default implementation does nothing
     System.out.println("[Collision] " + this + " colliding with " + other);
+  }
+
+  /**
+   * Handle key press event.
+   * It is ran anytime a key is pressed. No actual order is guaranteed.
+   * 
+   * @param keyCode
+   * @param keyboardAdapter
+   */
+  public void onKeyPressed(int keyCode, KeyboardAdapter keyboardAdapter) {
+    // Default implementation does nothing
+  }
+
+  /**
+   * Handle key release event.
+   * It is ran anytime a key is pressed. No actual order is guaranteed.
+   * 
+   * @param keyCode
+   * @param keyboardAdapter
+   */
+  public void onKeyReleased(int keyCode, KeyboardAdapter keyboardAdapter) {
+    // Default implementation does nothing
   }
 
   public boolean isCollidingWith(GameObject other) {

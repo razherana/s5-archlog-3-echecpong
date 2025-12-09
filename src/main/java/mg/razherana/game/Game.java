@@ -10,6 +10,7 @@ import javax.swing.SwingUtilities;
 import mg.razherana.game.gfx.GameFrame;
 import mg.razherana.game.gfx.GamePanel;
 import mg.razherana.game.logic.GameObject;
+import mg.razherana.game.logic.listeners.KeyboardAdapter;
 import mg.razherana.game.logic.objects.ball.Ball;
 import mg.razherana.game.logic.objects.board.Board;
 import mg.razherana.game.logic.objects.board.BoardBorder;
@@ -26,21 +27,23 @@ import mg.razherana.game.logic.utils.Vector2;
 public class Game {
   private Thread gameThread;
 
+  private final KeyboardAdapter keyboardAdapter = new KeyboardAdapter(this);
+
   // Game objects rendered in a priority queue based on their priority
   private List<GameObject> gameObjects = new ArrayList<>();
 
   // Game objects to be added/removed
   private List<GameObject> gameObjectsToAdd = new ArrayList<>();
+
   private List<GameObject> gameObjectsToRemove = new ArrayList<>();
-
   private volatile boolean running = false;
-  private volatile boolean updating = false;
 
+  private volatile boolean updating = false;
   private final Config config;
 
   private GameFrame gameFrame;
-  private GamePanel gamePanel;
 
+  private GamePanel gamePanel;
   private final Assets assets = new Assets();
 
   // Timing variables
@@ -49,6 +52,7 @@ public class Game {
   private final double UPDATE_CAP = 1.0 / TARGET_FPS; // 60 updates/sec
 
   private final Object lock = new Object();
+
   private List<Player> players = new ArrayList<>();
 
   public Game() {
@@ -69,7 +73,21 @@ public class Game {
 
     initGameObjects();
 
+    initListeners();
+
     run();
+  }
+
+  private void initListeners() {
+    // Add keyboard listener
+    gamePanel.addKeyListener(keyboardAdapter);
+  }
+
+  /**
+   * @return the keyboardAdapter
+   */
+  public KeyboardAdapter getKeyboardAdapter() {
+    return keyboardAdapter;
   }
 
   /**
@@ -170,6 +188,59 @@ public class Game {
     this.gamePanel = gamePanel;
   }
 
+  /**
+   * @return the objectsToAdd
+   */
+  public List<GameObject> getGameObjectsToAdd() {
+    return gameObjectsToAdd;
+  }
+
+  /**
+   * @param objectsToAdd the objectsToAdd to set
+   */
+  public void setGameObjectsToAdd(List<GameObject> objectsToAdd) {
+    this.gameObjectsToAdd = objectsToAdd;
+  }
+
+  /**
+   * @return the objectsToRemove
+   */
+  public List<GameObject> getGameObjectsToRemove() {
+    return gameObjectsToRemove;
+  }
+
+  /**
+   * @param objectsToRemove the objectsToRemove to set
+   */
+  public void setGameObjectsToRemove(List<GameObject> objectsToRemove) {
+    this.gameObjectsToRemove = objectsToRemove;
+  }
+
+  /**
+   * @return the running
+   */
+  public boolean isRunning() {
+    return running;
+  }
+
+  /**
+   * @param running the running to set
+   */
+  public void setRunning(boolean running) {
+    this.running = running;
+  }
+
+  /**
+   * @param players the players to set
+   */
+  public void setPlayers(List<Player> players) {
+    this.players = players;
+  }
+
+  public void togglePause() {
+    this.updating = !this.updating;
+  }
+
   private void initGameObjects() {
     // Init players
     Player player1 = new Player("Player 1", new Color(0x596070), new Color(0x96a2b3), new ArrayList<>());
@@ -207,11 +278,15 @@ public class Game {
     // Add platforms
     Platform platform1 = new Platform(this, new Vector2(220, 430), player1,
         Float.parseFloat(config.getProperty(Config.Key.PLATFORM_WIDTH)),
-        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_HEIGHT)));
+        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_HEIGHT)),
+        config.getProperty(Config.Key.PLATFORM_COMMAND_PLAYER1),
+        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_SPEED)));
 
     Platform platform2 = new Platform(this, new Vector2(220, 185), player2,
         Float.parseFloat(config.getProperty(Config.Key.PLATFORM_WIDTH)),
-        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_HEIGHT)));
+        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_HEIGHT)),
+        config.getProperty(Config.Key.PLATFORM_COMMAND_PLAYER2),
+        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_SPEED)));
 
     // Add to game
     gameObjects.add(platform1);
@@ -348,58 +423,5 @@ public class Game {
     SwingUtilities.invokeLater(() -> {
       gamePanel.repaint();
     });
-  }
-
-  /**
-   * @return the objectsToAdd
-   */
-  public List<GameObject> getGameObjectsToAdd() {
-    return gameObjectsToAdd;
-  }
-
-  /**
-   * @param objectsToAdd the objectsToAdd to set
-   */
-  public void setGameObjectsToAdd(List<GameObject> objectsToAdd) {
-    this.gameObjectsToAdd = objectsToAdd;
-  }
-
-  /**
-   * @return the objectsToRemove
-   */
-  public List<GameObject> getGameObjectsToRemove() {
-    return gameObjectsToRemove;
-  }
-
-  /**
-   * @param objectsToRemove the objectsToRemove to set
-   */
-  public void setGameObjectsToRemove(List<GameObject> objectsToRemove) {
-    this.gameObjectsToRemove = objectsToRemove;
-  }
-
-  /**
-   * @return the running
-   */
-  public boolean isRunning() {
-    return running;
-  }
-
-  /**
-   * @param running the running to set
-   */
-  public void setRunning(boolean running) {
-    this.running = running;
-  }
-
-  /**
-   * @param players the players to set
-   */
-  public void setPlayers(List<Player> players) {
-    this.players = players;
-  }
-
-  public void togglePause() {
-    this.updating = !this.updating;
   }
 }
