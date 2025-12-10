@@ -1,6 +1,7 @@
 package mg.razherana.game;
 
 import java.awt.Color;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -8,13 +9,16 @@ import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.JColorChooser;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 import mg.razherana.game.gfx.GameFrame;
 import mg.razherana.game.gfx.GamePanel;
+import mg.razherana.game.gfx.panels.GameOverPanel;
 import mg.razherana.game.logic.GameObject;
 import mg.razherana.game.logic.listeners.KeyboardAdapter;
 import mg.razherana.game.logic.objects.ball.Ball;
@@ -41,9 +45,9 @@ import mg.razherana.game.net.packets.MovementsPacket.PlatformDTO;
  * Contains the game instance and logic.
  */
 public class Game {
-  private Thread gameThread;
-
   private final static int MAX_FUTURE_RANDOMS = 30;
+
+  private Thread gameThread;
 
   private Deque<float[]> futureRandoms;
 
@@ -64,7 +68,10 @@ public class Game {
 
   private GameFrame gameFrame;
 
+  // Panels
   private GamePanel gamePanel;
+  private GameOverPanel gameOverPanel;
+
   private final Assets assets = new Assets();
 
   private List<Player> players = new ArrayList<>();
@@ -77,13 +84,6 @@ public class Game {
   private final Object gameObjectsLock = new Object();
 
   // Multiplayer parts
-
-  /**
-   * @return the gameObjectsLock
-   */
-  public Object getGameObjectsLock() {
-    return gameObjectsLock;
-  }
 
   private Client client;
 
@@ -122,7 +122,8 @@ public class Game {
     }
 
     // Initialize game components here
-    gameFrame = new GameFrame(this);
+    gameFrame = new GameFrame(this, Map.of(
+        "GAME_OVER", gameOverPanel = new GameOverPanel()));
     gamePanel = new GamePanel(this);
 
     gameFrame.init(gamePanel);
@@ -136,9 +137,11 @@ public class Game {
     run();
   }
 
-  private void initListeners() {
-    // Add keyboard listener
-    gamePanel.addKeyListener(keyboardAdapter);
+  /**
+   * @return the gameObjectsLock
+   */
+  public Object getGameObjectsLock() {
+    return gameObjectsLock;
   }
 
   /**
@@ -295,29 +298,6 @@ public class Game {
     this.players = players;
   }
 
-  public void togglePause() {
-    if (gameState == GameState.PAUSED)
-      this.gameState = GameState.RUNNING;
-    else if (gameState == GameState.RUNNING)
-      this.gameState = GameState.PAUSED;
-
-    notifyGameStateChange();
-  }
-
-  private void notifyGameStateChange() {
-    // If server, notify clients
-    GameStatePacket packet = new GameStatePacket(this);
-
-    if (isServerRunning()) {
-      server.sendDataToAllClients(packet.getData());
-    }
-
-    // If client, notify server
-    else if (client != null && client.isConnected()) {
-      client.sendData(packet.getData());
-    }
-  }
-
   public Player initPlayerAndObjects(Player player, int whiteOrBlack, boolean initCommands) {
     List<ChessPiece> chessPieces = ChessPiece.initDefaultPieces(this, player, whiteOrBlack);
 
@@ -354,26 +334,6 @@ public class Game {
     return player;
   }
 
-  private void initBase() {
-    // Init board
-    Board board = new Board(8, 8, this);
-    BoardBorder boardBorder = new BoardBorder(this, board);
-
-    // Create ball
-    Ball ball = new Ball(this,
-        new Vector2(board.getSize().x / 2 - Ball.RADIUS, board.getSize().y / 2 - Ball.RADIUS),
-        Float.parseFloat(config.getProperty(Config.Key.BALL_DAMAGE)),
-        Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED_X)),
-        Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED_Y)));
-
-    // Add board to game objects
-    gameObjects.add(boardBorder);
-    gameObjects.add(board);
-    gameObjects.add(ball);
-
-    sortGameObjectsByPriority();
-  }
-
   public void initGameObjects() {
     // Init players
     Player player1 = new Player("Player 1", new Color(0x596070), new Color(0x96a2b3), new ArrayList<>());
@@ -388,157 +348,6 @@ public class Game {
 
     // Add base objects
     initBase();
-  }
-
-  private void initAssets() {
-    // Load game assets (images, sounds, etc.)
-
-    assets.setChessPieceSpriteSheet(Assets.loadImage("/sprites/chesspieces.png"));
-    assets.setBallSpriteSheet(Assets.loadImage("/sprites/ball.png"));
-  }
-
-  private void run() {
-    // Start game loop
-    running = true;
-
-    gameThread = new Thread(this::loop);
-    gameThread.start();
-  }
-
-  private void loop() {
-    double frameTime = 0;
-    long lastTime = System.nanoTime();
-    long timer = System.currentTimeMillis();
-
-    @SuppressWarnings("unused")
-    int frames = 0;
-
-    @SuppressWarnings("unused")
-    int updates = 0;
-
-    long currentTime;
-    double delta;
-
-    while (running) {
-      currentTime = System.nanoTime();
-      delta = (currentTime - lastTime) / 1_000_000_000.0;
-      lastTime = currentTime;
-      frameTime += delta;
-
-      // Update game at fixed rate
-      while (frameTime >= UPDATE_CAP) {
-        update(UPDATE_CAP); // Fixed time step
-        frameTime -= UPDATE_CAP;
-        updates++;
-      }
-
-      // Render as fast as possible (or capped)
-      render();
-      frames++;
-
-      // FPS counter
-      if (System.currentTimeMillis() - timer >= 1_000) {
-        timer += 1_000;
-        // System.out.printf("[Engine/Loop] Delta: %g, UPS: %d, FPS: %d\n", delta,
-        // updates, frames);
-        updates = 0;
-        frames = 0;
-      }
-
-      // Sleep to prevent CPU hogging
-      try {
-        Thread.sleep(1);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-    }
-  }
-
-  private void update(double deltaTime) {
-    // Update game state (physics, AI, etc.)
-    synchronized (gameObjectsLock) {
-      if (gameState == GameState.RUNNING) {
-        // Thread-safe state updates
-        gameObjects.forEach(obj -> {
-          if (!gameObjectsToRemove.contains(obj))
-            obj.update(deltaTime);
-        });
-
-        handleCollisions();
-
-        // Add new game objects
-        if (!gameObjectsToAdd.isEmpty()) {
-          gameObjects.addAll(gameObjectsToAdd);
-          gameObjectsToAdd.clear();
-        }
-
-        // Remove marked game objects
-        if (!gameObjectsToRemove.isEmpty()) {
-          gameObjectsToRemove.forEach(obj -> obj.freeListeners());
-          gameObjects.removeAll(gameObjectsToRemove);
-          gameObjectsToRemove.clear();
-        }
-
-        sortGameObjectsByPriority();
-
-        // Check for game over condition
-        checkGameOver();
-      }
-    }
-  }
-
-  private void checkGameOver() {
-    for (Player player : players) {
-      if (player.getChessPieces().stream()
-          .filter(piece -> piece.getType() == ChessPieceType.KING_BLACK || piece.getType() == ChessPieceType.KING_WHITE)
-          .count() == 0) {
-        // Game over
-        SwingUtilities.invokeLater(() -> {
-          JOptionPane.showMessageDialog(gamePanel, player.getName() + " loses!", "Game Over",
-              JOptionPane.INFORMATION_MESSAGE);
-        });
-
-        gameState = GameState.GAME_OVER;
-
-        notifyGameStateChange();
-      }
-    }
-  }
-
-  private void handleCollisions() {
-    List<GameObject> objects = new ArrayList<>(gameObjects);
-    int size = objects.size();
-
-    for (int i = 0; i < size; i++) {
-      GameObject objA = objects.get(i);
-
-      // Skip if object is marked for removal
-      if (gameObjectsToRemove.contains(objA) || !objA.isCollision())
-        continue;
-
-      for (int j = i + 1; j < size; j++) {
-        GameObject objB = objects.get(j);
-
-        if (i == j || objA == objB || !objB.isCollision())
-          continue;
-
-        // Skip if object is marked for removal
-        if (gameObjectsToRemove.contains(objB))
-          continue;
-
-        if (objA.isCollidingWith(objB) && objB.isCollidingWith(objA) && objA != objB) {
-          objA.onCollision(objB);
-          objB.onCollision(objA);
-        }
-      }
-    }
-  }
-
-  private void render() {
-    // Repaint the game panel
-    SwingUtilities.invokeLater(() -> {
-      gamePanel.repaint();
-    });
   }
 
   /**
@@ -735,20 +544,6 @@ public class Game {
     setMultiplayer(true);
   }
 
-  private void forceClearEverything() {
-    // Clean up objects and reset game state
-    synchronized (gameObjectsLock) {
-      gameObjects.clear();
-      gameObjectsToAdd.clear();
-      gameObjectsToRemove.clear();
-      players.clear();
-
-      initBase();
-
-      gameState = GameState.PAUSED;
-    }
-  }
-
   public void clientDisconnect() {
     // Check if client is connected
     if (client == null || !client.isConnected()) {
@@ -769,7 +564,7 @@ public class Game {
 
   public void stopServer() {
     // Check if server is running
-    if (isServerRunning()) {
+    if (!isServerRunning()) {
       JOptionPane.showMessageDialog(gamePanel, "Server is not running!", "Error", JOptionPane.ERROR_MESSAGE);
       return;
     }
@@ -997,6 +792,280 @@ public class Game {
 
       if (isMultiplayer() && isServerRunning()) {
         server.sendRandomMovementToAllClients();
+      }
+    }
+  }
+
+  public void onKeyPress(int keyCode, JPanel jPanel) {
+    if (keyCode == KeyEvent.VK_SPACE) {
+      // Pause if it works
+      System.out.println(jPanel.getClass());
+      if (jPanel == gamePanel)
+        togglePause();
+
+      // Game over restart button
+      if (jPanel == gameOverPanel)
+        restartAfterGameOver();
+    }
+
+  }
+
+  private void initListeners() {
+    // Add keyboard listener
+    gameFrame.getMainPanel().addKeyListener(keyboardAdapter);
+  }
+
+  private void togglePause() {
+    if (gameState == GameState.PAUSED)
+      this.gameState = GameState.RUNNING;
+    else if (gameState == GameState.RUNNING)
+      this.gameState = GameState.PAUSED;
+
+    notifyGameStateChange();
+  }
+
+  private void notifyGameStateChange() {
+    // If server, notify clients
+    GameStatePacket packet = new GameStatePacket(this);
+
+    if (isServerRunning()) {
+      server.sendDataToAllClients(packet.getData());
+    }
+
+    // If client, notify server
+    else if (client != null && client.isConnected()) {
+      client.sendData(packet.getData());
+    }
+  }
+
+  private void initBase() {
+    // Init board
+    Board board = new Board(8, 8, this);
+    BoardBorder boardBorder = new BoardBorder(this, board);
+
+    // Create ball
+    Ball ball = new Ball(this,
+        new Vector2(board.getSize().x / 2 - Ball.RADIUS, board.getSize().y / 2 - Ball.RADIUS),
+        Float.parseFloat(config.getProperty(Config.Key.BALL_DAMAGE)),
+        Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED_X)),
+        Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED_Y)));
+
+    // Add board to game objects
+    gameObjects.add(boardBorder);
+    gameObjects.add(board);
+    gameObjects.add(ball);
+
+    sortGameObjectsByPriority();
+  }
+
+  private void initAssets() {
+    // Load game assets (images, sounds, etc.)
+
+    assets.setChessPieceSpriteSheet(Assets.loadImage("/sprites/chesspieces.png"));
+    assets.setBallSpriteSheet(Assets.loadImage("/sprites/ball.png"));
+  }
+
+  private void run() {
+    // Start game loop
+    running = true;
+
+    gameThread = new Thread(this::loop);
+    gameThread.start();
+  }
+
+  private void loop() {
+    double frameTime = 0;
+    long lastTime = System.nanoTime();
+    long timer = System.currentTimeMillis();
+
+    @SuppressWarnings("unused")
+    int frames = 0;
+
+    @SuppressWarnings("unused")
+    int updates = 0;
+
+    long currentTime;
+    double delta;
+
+    while (running) {
+      currentTime = System.nanoTime();
+      delta = (currentTime - lastTime) / 1_000_000_000.0;
+      lastTime = currentTime;
+      frameTime += delta;
+
+      // Update game at fixed rate
+      while (frameTime >= UPDATE_CAP) {
+        update(UPDATE_CAP); // Fixed time step
+        frameTime -= UPDATE_CAP;
+        updates++;
+      }
+
+      // Render as fast as possible (or capped)
+      render();
+      frames++;
+
+      // FPS counter
+      if (System.currentTimeMillis() - timer >= 1_000) {
+        timer += 1_000;
+        // System.out.printf("[Engine/Loop] Delta: %g, UPS: %d, FPS: %d\n", delta,
+        // updates, frames);
+        updates = 0;
+        frames = 0;
+      }
+
+      // Sleep to prevent CPU hogging
+      try {
+        Thread.sleep(1);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+  private void update(double deltaTime) {
+    // Update game state (physics, AI, etc.)
+    synchronized (gameObjectsLock) {
+      if (gameState == GameState.RUNNING) {
+        // Thread-safe state updates
+        gameObjects.forEach(obj -> {
+          if (!gameObjectsToRemove.contains(obj))
+            obj.update(deltaTime);
+        });
+
+        handleCollisions();
+
+        boolean sort = false;
+
+        // Add new game objects
+        if (!gameObjectsToAdd.isEmpty()) {
+          gameObjects.addAll(gameObjectsToAdd);
+          gameObjectsToAdd.clear();
+          sort = true;
+        }
+
+        // Remove marked game objects
+        if (!gameObjectsToRemove.isEmpty()) {
+          gameObjectsToRemove.forEach(obj -> obj.freeListeners());
+          gameObjects.removeAll(gameObjectsToRemove);
+          gameObjectsToRemove.clear();
+          sort = true;
+        }
+
+        if (sort)
+          sortGameObjectsByPriority();
+
+        // Check for game over condition
+        checkGameOver();
+      }
+    }
+  }
+
+  private void checkGameOver() {
+    for (Player player : players) {
+      if (player.getChessPieces().stream()
+          .filter(piece -> piece.getType() == ChessPieceType.KING_BLACK || piece.getType() == ChessPieceType.KING_WHITE)
+          .count() == 0) {
+
+        gameState = GameState.GAME_OVER;
+
+        // Update font
+        gameOverPanel.setLoserName(player.getName());
+        getGameFrame().changePanel("GAME_OVER");
+
+        notifyGameStateChange();
+      }
+    }
+  }
+
+  private void handleCollisions() {
+    List<GameObject> objects = new ArrayList<>(gameObjects);
+    int size = objects.size();
+
+    for (int i = 0; i < size; i++) {
+      GameObject objA = objects.get(i);
+
+      // Skip if object is marked for removal
+      if (gameObjectsToRemove.contains(objA) || !objA.isCollision())
+        continue;
+
+      for (int j = i + 1; j < size; j++) {
+        GameObject objB = objects.get(j);
+
+        if (i == j || objA == objB || !objB.isCollision())
+          continue;
+
+        // Skip if object is marked for removal
+        if (gameObjectsToRemove.contains(objB))
+          continue;
+
+        if (objA.isCollidingWith(objB) && objB.isCollidingWith(objA) && objA != objB) {
+          objA.onCollision(objB);
+          objB.onCollision(objA);
+        }
+      }
+    }
+  }
+
+  private void render() {
+    // Repaint the game panel
+    SwingUtilities.invokeLater(() -> {
+      gamePanel.repaint();
+    });
+  }
+
+  private void forceClearEverything() {
+    // Clean up objects and reset game state
+    synchronized (gameObjectsLock) {
+      gameObjects.clear();
+      gameObjectsToAdd.clear();
+      gameObjectsToRemove.clear();
+      players.clear();
+
+      initBase();
+
+      gameState = GameState.PAUSED;
+    }
+  }
+
+  private void restartAfterGameOver() {
+    if (gameState == GameState.GAME_OVER) {
+      // We restart
+      forceClearEverything();
+      gameState = GameState.GAME_OVER;
+
+      // Check if server
+      if (isServerRunning()) {
+        // We reset the player's pieces and platforms
+        var players = server.getConnectedPlayers();
+
+        synchronized (gameObjectsLock) {
+          for (PlayerMP playerMP : players) {
+            initPlayerAndObjects(
+                playerMP,
+                playerMP.getWhiteOrBlack(),
+                false);
+
+            getPlayers().add(playerMP);
+          }
+        }
+
+        gameState = GameState.PAUSED;
+
+        gameFrame.changePanel("GAME");
+
+        notifyGameStateChange();
+      } else if (!isMultiplayer()) {
+        // We assume a singleplayer game
+        synchronized (gameObjectsLock) {
+          forceClearEverything();
+          gameObjects.clear();
+
+          initGameObjects();
+        }
+
+        gameState = GameState.PAUSED;
+
+        gameFrame.changePanel("GAME");
       }
     }
   }

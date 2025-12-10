@@ -3,8 +3,6 @@ package mg.razherana.game.gfx;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -28,16 +26,6 @@ public class GamePanel extends JPanel {
 
     setFocusable(true);
     requestFocusInWindow();
-
-    addKeyListener(new KeyAdapter() {
-      @Override
-      public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-          // Toggle pause state
-          game.togglePause();
-        }
-      }
-    });
 
     addMouseListener(new MouseAdapter() {
       @Override
