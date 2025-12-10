@@ -1,7 +1,7 @@
 package mg.razherana.game.net.packets;
 
 public enum PacketType {
-  INVALID(-1), LOGIN(00), ERROR(99), SNAPSHOT(02), MOVEMENTS_PLATFORM(03), GAME_STATE(04);
+  INVALID(-1), LOGIN(00), ERROR(99), SNAPSHOT(02), MOVEMENTS_PLATFORM(03), GAME_STATE(04), RANDOM_MOVEMENT(05);
 
   private int packetId;
 

@@ -2,7 +2,10 @@ package mg.razherana.game;
 
 import java.awt.Color;
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 
@@ -23,6 +26,7 @@ import mg.razherana.game.logic.objects.platform.Platform;
 import mg.razherana.game.logic.players.Player;
 import mg.razherana.game.logic.utils.Assets;
 import mg.razherana.game.logic.utils.Config;
+import mg.razherana.game.logic.utils.RandomGen;
 import mg.razherana.game.logic.utils.Vector2;
 import mg.razherana.game.net.Client;
 import mg.razherana.game.net.PlayerMP;
@@ -38,6 +42,10 @@ import mg.razherana.game.net.packets.MovementsPacket.PlatformDTO;
  */
 public class Game {
   private Thread gameThread;
+
+  private final static int MAX_FUTURE_RANDOMS = 30;
+
+  private Deque<float[]> futureRandoms;
 
   private final KeyboardAdapter keyboardAdapter = new KeyboardAdapter(this);
 
@@ -83,12 +91,34 @@ public class Game {
 
   private boolean multiplayer = false;
 
+  private final float[] randomX;
+
+  private final float[] randomY;
+
   public Game() {
     // Init config
     try {
       config = new Config();
     } catch (IOException e) {
       throw new RuntimeException("Failed to load config file", e);
+    }
+
+    {
+      String[] parts = config.getProperty(Config.Key.MVT_SPEED_RANDOM_X).split(",");
+
+      randomX = new float[] {
+          Float.parseFloat(parts[0]),
+          Float.parseFloat(parts[1]),
+      };
+    }
+
+    {
+      String[] parts = config.getProperty(Config.Key.MVT_SPEED_RANDOM_Y).split(",");
+
+      randomY = new float[] {
+          Float.parseFloat(parts[0]),
+          Float.parseFloat(parts[1]),
+      };
     }
 
     // Initialize game components here
@@ -308,8 +338,8 @@ public class Game {
     float speed = Float.parseFloat(config.getProperty(Config.Key.PLATFORM_SPEED));
 
     Vector2 position = whiteOrBlack == 1
-        ? Vector2.from(config.getProperty(Config.Key.PLATFORM_POSITION_BLACK))
-        : Vector2.from(config.getProperty(Config.Key.PLATFORM_POSITION_WHITE));
+        ? Vector2.from(config.getProperty(Config.Key.PLATFORM_POSITION_WHITE))
+        : Vector2.from(config.getProperty(Config.Key.PLATFORM_POSITION_BLACK));
 
     Platform platform = new Platform(this,
         position,
@@ -349,38 +379,8 @@ public class Game {
     Player player1 = new Player("Player 1", new Color(0x596070), new Color(0x96a2b3), new ArrayList<>());
     Player player2 = new Player("Player 2", new Color(0x96a2b3), new Color(0x596070), new ArrayList<>());
 
-    List<ChessPiece> chessPieces1 = ChessPiece.initDefaultPieces(this, player1, 1);
-    List<ChessPiece> chessPieces2 = ChessPiece.initDefaultPieces(this, player2, 2);
-
-    // Add chess pieces to game objects and assign to players
-    chessPieces1.forEach(piece -> {
-      gameObjects.add(piece);
-      player1.getChessPieces().add(piece);
-    });
-
-    chessPieces2.forEach(piece -> {
-      gameObjects.add(piece);
-      player2.getChessPieces().add(piece);
-    });
-
-    // Add platforms
-    Platform platform1 = new Platform(this, new Vector2(220, 430), player1,
-        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_WIDTH)),
-        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_HEIGHT)),
-        config.getProperty(Config.Key.PLATFORM_COMMAND_PLAYER1),
-        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_SPEED)));
-
-    Platform platform2 = new Platform(this, new Vector2(220, 185), player2,
-        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_WIDTH)),
-        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_HEIGHT)),
-        config.getProperty(Config.Key.PLATFORM_COMMAND_PLAYER2),
-        Float.parseFloat(config.getProperty(Config.Key.PLATFORM_SPEED)));
-
-    // Add to game
-    gameObjects.add(platform1);
-    gameObjects.add(platform2);
-
-    sortGameObjectsByPriority();
+    initPlayerAndObjects(player1, 1, true);
+    initPlayerAndObjects(player2, 2, true);
 
     // Add players to the game
     players.add(player1);
@@ -936,5 +936,54 @@ public class Game {
 
   public void updateMovements(MovementsPacket platformPacket) {
     updateMovements(platformPacket, "");
+  }
+
+  public float[] getNextRandom() {
+    synchronized (gameObjectsLock) {
+      if (futureRandoms == null || futureRandoms.size() <= 0)
+        generateFutureRandoms();
+
+      return futureRandoms.poll();
+    }
+  }
+
+  public float[] peekNextRandom() {
+    synchronized (gameObjectsLock) {
+      if (futureRandoms == null || futureRandoms.size() <= 0)
+        generateFutureRandoms();
+
+      return futureRandoms.peek();
+    }
+  }
+
+  public Deque<float[]> getFutureRandoms() {
+    if (futureRandoms == null || futureRandoms.size() <= 0)
+      generateFutureRandoms();
+
+    return futureRandoms;
+  }
+
+  public void setFutureRandoms(float[][] futureRandoms) {
+    var list = Arrays.asList(futureRandoms);
+    this.futureRandoms = new ArrayDeque<>(list);
+  }
+
+  public void generateFutureRandoms() {
+    synchronized (gameObjectsLock) {
+      futureRandoms = new ArrayDeque<>();
+
+      for (int i = 0; i < MAX_FUTURE_RANDOMS; i++) {
+        float randX = RandomGen.generateRandomFloat(randomX[0], randomX[1]);
+        float randY = RandomGen.generateRandomFloat(randomY[0], randomY[1]);
+
+        float[] randomPair = new float[] { randX, randY };
+
+        futureRandoms.addLast(randomPair);
+      }
+
+      if (isMultiplayer() && isServerRunning()) {
+        server.sendRandomMovementToAllClients();
+      }
+    }
   }
 }

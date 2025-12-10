@@ -18,6 +18,7 @@ import mg.razherana.game.net.packets.GameStatePacket;
 import mg.razherana.game.net.packets.LoginPacket;
 import mg.razherana.game.net.packets.Packet;
 import mg.razherana.game.net.packets.PacketType;
+import mg.razherana.game.net.packets.RandomMovementPacket;
 import mg.razherana.game.net.packets.MovementsPacket;
 import mg.razherana.game.net.packets.SnapshotPacket;
 
@@ -120,6 +121,12 @@ public class Client extends Thread {
         packet = new SnapshotPacket(data);
         game.updateGameStateFromSnapshot((SnapshotPacket) packet);
         break;
+
+      case RANDOM_MOVEMENT:
+        packet = new RandomMovementPacket(data);
+        game.setFutureRandoms(((RandomMovementPacket) packet).getRandomMovements());
+        break;
+
       case GAME_STATE:
         // Handle game state packet
         packet = new GameStatePacket(data);

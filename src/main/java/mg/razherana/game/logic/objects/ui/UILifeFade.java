@@ -13,7 +13,7 @@ public class UILifeFade extends GameObject {
   private final float percentage;
 
   static final float border = 2f;
-  public static final float HEIGHT = 20f;
+  public static final float HEIGHT = 5f;
 
   float alpha = 1.0f;
   float timePassed = 0.0f;

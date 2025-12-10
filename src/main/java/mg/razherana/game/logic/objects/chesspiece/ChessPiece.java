@@ -10,7 +10,8 @@ import mg.razherana.game.logic.players.Player;
 import mg.razherana.game.logic.utils.Vector2;
 
 public class ChessPiece extends GameObject {
-  public static final int TILE = 80;
+  // Og is 80
+  public static final int TILE = 40;
 
   private UILifeFade lifeFade;
 

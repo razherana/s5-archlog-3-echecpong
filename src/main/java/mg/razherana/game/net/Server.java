@@ -15,6 +15,7 @@ import mg.razherana.game.net.packets.GameStatePacket;
 import mg.razherana.game.net.packets.LoginPacket;
 import mg.razherana.game.net.packets.Packet;
 import mg.razherana.game.net.packets.PacketType;
+import mg.razherana.game.net.packets.RandomMovementPacket;
 import mg.razherana.game.net.packets.MovementsPacket;
 import mg.razherana.game.net.packets.SnapshotPacket;
 
@@ -22,6 +23,25 @@ public class Server extends Thread {
   private DatagramSocket socket;
   public Game game;
   private ServerSnapshotThread snapshotThread;
+  private RandomMovementThread randomMovementThread;
+
+  class RandomMovementThread extends Thread {
+    @Override
+    public void run() {
+      while (running && isRunning()) {
+        try {
+          Thread.sleep(1000 / Integer
+              .parseInt(game.getConfig().getProperty(Config.Key.SERVER_RANDOM_RATE)));
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+
+        // Send snapshot to all clients
+        if (running && isRunning())
+          sendRandomMovementToAllClients();
+      }
+    }
+  }
 
   class ServerSnapshotThread extends Thread {
     @Override
@@ -75,6 +95,11 @@ public class Server extends Thread {
     }
   }
 
+  public void sendRandomMovementToAllClients() {
+    RandomMovementPacket movementPacket = new RandomMovementPacket(game);
+    sendDataToAllClients(movementPacket.getData());
+  }
+
   public void sendMovementsSnapshotToAllClients() {
     MovementsPacket movementsPacket = new MovementsPacket(game);
     sendDataToAllClients(movementsPacket.getData());
@@ -106,6 +131,9 @@ public class Server extends Thread {
 
     platformThread = new ServerPlatformThread();
     platformThread.start();
+
+    randomMovementThread = new RandomMovementThread();
+    randomMovementThread.start();
 
     System.out.println("[MP/Server] : Server started on port " + socket.getLocalPort());
 
@@ -206,7 +234,7 @@ public class Server extends Thread {
       case MOVEMENTS_PLATFORM:
         MovementsPacket platformPacket = new MovementsPacket(data);
         platformPacket.setBall(null); // Ignore ball data from client
-        
+
         game.updateMovements(platformPacket);
 
         break;

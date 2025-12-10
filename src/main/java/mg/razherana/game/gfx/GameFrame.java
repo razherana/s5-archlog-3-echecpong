@@ -26,8 +26,8 @@ public class GameFrame extends JFrame {
       }
     });
 
-    setResizable(true);
-    setSize(1280, 1000);
+    setResizable(false);
+    setSize(320, 380);
     setLocationRelativeTo(null);
 
     getContentPane().setBackground(new Color(0x00000011));

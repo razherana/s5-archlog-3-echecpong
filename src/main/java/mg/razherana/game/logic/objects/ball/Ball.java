@@ -14,7 +14,8 @@ import mg.razherana.game.logic.utils.Collision;
 import mg.razherana.game.logic.utils.Collision.CollisionSidesResult;
 
 public class Ball extends GameObject {
-  public static final int RADIUS = 25;
+  // Og is 25
+  public static final int RADIUS = 15;
   public static final float DIAMETER = RADIUS * 2;
 
   static final float ANIMATION_FRAME_DURATION = 0.05f; // Duration of each frame in seconds
@@ -214,8 +215,9 @@ public class Ball extends GameObject {
       }
 
       // Add random to make the ball less predictable
-      float randomFactorX = (float) (0.3 + Math.random()); // Random value between 0.8 and 1.8
-      float randomFactorY = (float) (0.3 + Math.random()); // Random value between 0.8 and 1.8
+      float[] random = getGame().getNextRandom();
+      float randomFactorX = random[0];
+      float randomFactorY = random[1];
 
       System.out.println("[Ball/Collision/RandomFactor] Random factors: " + randomFactorX + ", " + randomFactorY);
 

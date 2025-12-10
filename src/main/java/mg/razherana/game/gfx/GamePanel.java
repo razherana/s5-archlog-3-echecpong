@@ -16,7 +16,7 @@ import mg.razherana.game.logic.utils.Vector2;
 
 public class GamePanel extends JPanel {
   private final Game game;
-  private Vector2 origin = new Vector2(300, 150);
+  private Vector2 origin = new Vector2(0, 0);
 
   public GamePanel(Game game) {
     // Sets the panel to be double buffered
