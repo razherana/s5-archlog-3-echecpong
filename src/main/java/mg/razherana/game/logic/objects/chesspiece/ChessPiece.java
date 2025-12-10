@@ -1,6 +1,7 @@
 package mg.razherana.game.logic.objects.chesspiece;
 
 import java.awt.Graphics2D;
+import java.util.ArrayList;
 import java.util.List;
 
 import mg.razherana.game.Game;
@@ -53,6 +54,78 @@ public class ChessPiece extends GameObject {
           new ChessPiece(game, new Vector2(6 * TILE, 1 * TILE), player, ChessPieceType.PAWN_BLACK),
           new ChessPiece(game, new Vector2(7 * TILE, 1 * TILE), player, ChessPieceType.PAWN_BLACK));
     }
+  }
+
+  public static List<ChessPiece> initDefaultPieces(Game game, Player player, int whiteOrBlack, int number) {
+    if (number == 0)
+      return List.of();
+
+    if (number < 0)
+      return initDefaultPieces(game, player, whiteOrBlack);
+
+    ChessPiece[] arr;
+    if (whiteOrBlack == 1) {
+      arr = new ChessPiece[] {
+          new ChessPiece(game, new Vector2(0 * TILE, 7 * TILE), player, ChessPieceType.ROOK_WHITE),
+          new ChessPiece(game, new Vector2(1 * TILE, 7 * TILE), player, ChessPieceType.KNIGHT_WHITE),
+          new ChessPiece(game, new Vector2(2 * TILE, 7 * TILE), player, ChessPieceType.BISHOP_WHITE),
+          new ChessPiece(game, new Vector2(3 * TILE, 7 * TILE), player, ChessPieceType.QUEEN_WHITE),
+          new ChessPiece(game, new Vector2(4 * TILE, 7 * TILE), player, ChessPieceType.KING_WHITE),
+          new ChessPiece(game, new Vector2(5 * TILE, 7 * TILE), player, ChessPieceType.BISHOP_WHITE),
+          new ChessPiece(game, new Vector2(6 * TILE, 7 * TILE), player, ChessPieceType.KNIGHT_WHITE),
+          new ChessPiece(game, new Vector2(7 * TILE, 7 * TILE), player, ChessPieceType.ROOK_WHITE),
+          new ChessPiece(game, new Vector2(0 * TILE, 6 * TILE), player, ChessPieceType.PAWN_WHITE),
+          new ChessPiece(game, new Vector2(1 * TILE, 6 * TILE), player, ChessPieceType.PAWN_WHITE),
+          new ChessPiece(game, new Vector2(2 * TILE, 6 * TILE), player, ChessPieceType.PAWN_WHITE),
+          new ChessPiece(game, new Vector2(3 * TILE, 6 * TILE), player, ChessPieceType.PAWN_WHITE),
+          new ChessPiece(game, new Vector2(4 * TILE, 6 * TILE), player, ChessPieceType.PAWN_WHITE),
+          new ChessPiece(game, new Vector2(5 * TILE, 6 * TILE), player, ChessPieceType.PAWN_WHITE),
+          new ChessPiece(game, new Vector2(6 * TILE, 6 * TILE), player, ChessPieceType.PAWN_WHITE),
+          new ChessPiece(game, new Vector2(7 * TILE, 6 * TILE), player, ChessPieceType.PAWN_WHITE)
+      };
+    } else {
+      arr = new ChessPiece[] {
+          new ChessPiece(game, new Vector2(0 * TILE, 0 * TILE), player, ChessPieceType.ROOK_BLACK),
+          new ChessPiece(game, new Vector2(1 * TILE, 0 * TILE), player, ChessPieceType.KNIGHT_BLACK),
+          new ChessPiece(game, new Vector2(2 * TILE, 0 * TILE), player, ChessPieceType.BISHOP_BLACK),
+          new ChessPiece(game, new Vector2(3 * TILE, 0 * TILE), player, ChessPieceType.QUEEN_BLACK),
+          new ChessPiece(game, new Vector2(4 * TILE, 0 * TILE), player, ChessPieceType.KING_BLACK),
+          new ChessPiece(game, new Vector2(5 * TILE, 0 * TILE), player, ChessPieceType.BISHOP_BLACK),
+          new ChessPiece(game, new Vector2(6 * TILE, 0 * TILE), player, ChessPieceType.KNIGHT_BLACK),
+          new ChessPiece(game, new Vector2(7 * TILE, 0 * TILE), player, ChessPieceType.ROOK_BLACK),
+          new ChessPiece(game, new Vector2(0 * TILE, 1 * TILE), player, ChessPieceType.PAWN_BLACK),
+          new ChessPiece(game, new Vector2(1 * TILE, 1 * TILE), player, ChessPieceType.PAWN_BLACK),
+          new ChessPiece(game, new Vector2(2 * TILE, 1 * TILE), player, ChessPieceType.PAWN_BLACK),
+          new ChessPiece(game, new Vector2(3 * TILE, 1 * TILE), player, ChessPieceType.PAWN_BLACK),
+          new ChessPiece(game, new Vector2(4 * TILE, 1 * TILE), player, ChessPieceType.PAWN_BLACK),
+          new ChessPiece(game, new Vector2(5 * TILE, 1 * TILE), player, ChessPieceType.PAWN_BLACK),
+          new ChessPiece(game, new Vector2(6 * TILE, 1 * TILE), player, ChessPieceType.PAWN_BLACK),
+          new ChessPiece(game, new Vector2(7 * TILE, 1 * TILE), player, ChessPieceType.PAWN_BLACK)
+      };
+    }
+
+    List<ChessPiece> list = new ArrayList<>();
+
+    int start = 4;
+    int[] counts = new int[number];
+    counts[0] = start;
+
+    for (int i = 0, min = start, max = start; i < number - 1; i++) {
+      if (i % 2 == 0) {
+        min--;
+        counts[i + 1] = min;
+      } else {
+        max++;
+        counts[i + 1] = max;
+      }
+    }
+
+    for (int i = 0; i < counts.length; i++) {
+      list.add(arr[counts[i]]);
+      list.add(arr[counts[i] + 8]);
+    }
+
+    return list;
   }
 
   private Player player;

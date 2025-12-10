@@ -68,6 +68,8 @@ public class Game {
 
   private GameFrame gameFrame;
 
+  private final int pieceNumber;
+
   // Panels
   private GamePanel gamePanel;
   private GameOverPanel gameOverPanel;
@@ -120,6 +122,8 @@ public class Game {
           Float.parseFloat(parts[1]),
       };
     }
+
+    pieceNumber = Integer.parseInt(config.getProperty(Config.Key.PIECE_NUMBER));
 
     // Initialize game components here
     gameFrame = new GameFrame(this, Map.of(
@@ -299,7 +303,7 @@ public class Game {
   }
 
   public Player initPlayerAndObjects(Player player, int whiteOrBlack, boolean initCommands) {
-    List<ChessPiece> chessPieces = ChessPiece.initDefaultPieces(this, player, whiteOrBlack);
+    List<ChessPiece> chessPieces = ChessPiece.initDefaultPieces(this, player, whiteOrBlack, pieceNumber);
 
     chessPieces.forEach(piece -> {
       gameObjects.add(piece);
