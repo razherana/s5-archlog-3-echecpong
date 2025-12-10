@@ -3,8 +3,10 @@ package mg.razherana.game;
 import java.awt.Color;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
+import javax.swing.JColorChooser;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
@@ -22,6 +24,14 @@ import mg.razherana.game.logic.players.Player;
 import mg.razherana.game.logic.utils.Assets;
 import mg.razherana.game.logic.utils.Config;
 import mg.razherana.game.logic.utils.Vector2;
+import mg.razherana.game.net.Client;
+import mg.razherana.game.net.PlayerMP;
+import mg.razherana.game.net.Server;
+import mg.razherana.game.net.packets.GameStatePacket;
+import mg.razherana.game.net.packets.LoginPacket;
+import mg.razherana.game.net.packets.MovementsPacket;
+import mg.razherana.game.net.packets.SnapshotPacket;
+import mg.razherana.game.net.packets.MovementsPacket.PlatformDTO;
 
 /**
  * Contains the game instance and logic.
@@ -49,14 +59,29 @@ public class Game {
   private GamePanel gamePanel;
   private final Assets assets = new Assets();
 
+  private List<Player> players = new ArrayList<>();
+
   // Timing variables
   private final double TARGET_FPS = 144.0;
 
   private final double UPDATE_CAP = 1.0 / TARGET_FPS; // 60 updates/sec
 
-  private final Object lock = new Object();
+  private final Object gameObjectsLock = new Object();
 
-  private List<Player> players = new ArrayList<>();
+  // Multiplayer parts
+
+  /**
+   * @return the gameObjectsLock
+   */
+  public Object getGameObjectsLock() {
+    return gameObjectsLock;
+  }
+
+  private Client client;
+
+  private Server server;
+
+  private boolean multiplayer = false;
 
   public Game() {
     // Init config
@@ -126,19 +151,19 @@ public class Game {
   }
 
   public void addGameObject(GameObject obj) {
-    synchronized (lock) {
+    synchronized (gameObjectsLock) {
       gameObjectsToAdd.add(obj);
     }
   }
 
   public void removeGameObject(GameObject obj) {
-    synchronized (lock) {
+    synchronized (gameObjectsLock) {
       gameObjectsToRemove.add(obj);
     }
   }
 
   public void sortGameObjectsByPriority() {
-    synchronized (lock) {
+    synchronized (gameObjectsLock) {
       gameObjects.sort((a, b) -> Integer.compare(a.getPriority(), b.getPriority()));
     }
   }
@@ -151,7 +176,7 @@ public class Game {
   }
 
   public List<GameObject> getGameObjectsAsList() {
-    synchronized (lock) {
+    synchronized (gameObjectsLock) {
       return List.copyOf(getGameObjects());
     }
   }
@@ -245,13 +270,61 @@ public class Game {
       this.gameState = GameState.RUNNING;
     else if (gameState == GameState.RUNNING)
       this.gameState = GameState.PAUSED;
+
+    notifyGameStateChange();
   }
 
-  private void initGameObjects() {
-    // Init players
-    Player player1 = new Player("Player 1", new Color(0x596070), new Color(0x96a2b3), new ArrayList<>());
-    Player player2 = new Player("Player 2", new Color(0x96a2b3), new Color(0x596070), new ArrayList<>());
+  private void notifyGameStateChange() {
+    // If server, notify clients
+    GameStatePacket packet = new GameStatePacket(this);
 
+    if (isServerRunning()) {
+      server.sendDataToAllClients(packet.getData());
+    }
+
+    // If client, notify server
+    else if (client != null && client.isConnected()) {
+      client.sendData(packet.getData());
+    }
+  }
+
+  public Player initPlayerAndObjects(Player player, int whiteOrBlack, boolean initCommands) {
+    List<ChessPiece> chessPieces = ChessPiece.initDefaultPieces(this, player, whiteOrBlack);
+
+    chessPieces.forEach(piece -> {
+      gameObjects.add(piece);
+      player.getChessPieces().add(piece);
+    });
+
+    String commands = null;
+
+    if (initCommands) {
+      commands = whiteOrBlack == 1 ? config.getProperty(Config.Key.PLATFORM_COMMAND_PLAYER1)
+          : config.getProperty(Config.Key.PLATFORM_COMMAND_PLAYER2);
+    }
+
+    float w = Float.parseFloat(config.getProperty(Config.Key.PLATFORM_WIDTH));
+    float h = Float.parseFloat(config.getProperty(Config.Key.PLATFORM_HEIGHT));
+    float speed = Float.parseFloat(config.getProperty(Config.Key.PLATFORM_SPEED));
+
+    Vector2 position = whiteOrBlack == 1
+        ? Vector2.from(config.getProperty(Config.Key.PLATFORM_POSITION_BLACK))
+        : Vector2.from(config.getProperty(Config.Key.PLATFORM_POSITION_WHITE));
+
+    Platform platform = new Platform(this,
+        position,
+        player,
+        w,
+        h,
+        commands,
+        speed);
+
+    gameObjects.add(platform);
+
+    return player;
+  }
+
+  private void initBase() {
     // Init board
     Board board = new Board(8, 8, this);
     BoardBorder boardBorder = new BoardBorder(this, board);
@@ -263,12 +336,21 @@ public class Game {
         Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED_X)),
         Float.parseFloat(config.getProperty(Config.Key.BALL_SPEED_Y)));
 
-    List<ChessPiece> chessPieces1 = ChessPiece.initDefaultPieces(this, player1, 1);
-    List<ChessPiece> chessPieces2 = ChessPiece.initDefaultPieces(this, player2, 2);
-
     // Add board to game objects
     gameObjects.add(boardBorder);
     gameObjects.add(board);
+    gameObjects.add(ball);
+
+    sortGameObjectsByPriority();
+  }
+
+  public void initGameObjects() {
+    // Init players
+    Player player1 = new Player("Player 1", new Color(0x596070), new Color(0x96a2b3), new ArrayList<>());
+    Player player2 = new Player("Player 2", new Color(0x96a2b3), new Color(0x596070), new ArrayList<>());
+
+    List<ChessPiece> chessPieces1 = ChessPiece.initDefaultPieces(this, player1, 1);
+    List<ChessPiece> chessPieces2 = ChessPiece.initDefaultPieces(this, player2, 2);
 
     // Add chess pieces to game objects and assign to players
     chessPieces1.forEach(piece -> {
@@ -298,14 +380,14 @@ public class Game {
     gameObjects.add(platform1);
     gameObjects.add(platform2);
 
-    // Add ball to game objects
-    gameObjects.add(ball);
-
     sortGameObjectsByPriority();
 
     // Add players to the game
     players.add(player1);
     players.add(player2);
+
+    // Add base objects
+    initBase();
   }
 
   private void initAssets() {
@@ -327,7 +409,11 @@ public class Game {
     double frameTime = 0;
     long lastTime = System.nanoTime();
     long timer = System.currentTimeMillis();
+
+    @SuppressWarnings("unused")
     int frames = 0;
+
+    @SuppressWarnings("unused")
     int updates = 0;
 
     long currentTime;
@@ -353,7 +439,8 @@ public class Game {
       // FPS counter
       if (System.currentTimeMillis() - timer >= 1_000) {
         timer += 1_000;
-        System.out.printf("[Engine/Loop] Delta: %g, UPS: %d, FPS: %d\n", delta, updates, frames);
+        // System.out.printf("[Engine/Loop] Delta: %g, UPS: %d, FPS: %d\n", delta,
+        // updates, frames);
         updates = 0;
         frames = 0;
       }
@@ -369,7 +456,7 @@ public class Game {
 
   private void update(double deltaTime) {
     // Update game state (physics, AI, etc.)
-    synchronized (lock) {
+    synchronized (gameObjectsLock) {
       if (gameState == GameState.RUNNING) {
         // Thread-safe state updates
         gameObjects.forEach(obj -> {
@@ -387,6 +474,7 @@ public class Game {
 
         // Remove marked game objects
         if (!gameObjectsToRemove.isEmpty()) {
+          gameObjectsToRemove.forEach(obj -> obj.freeListeners());
           gameObjects.removeAll(gameObjectsToRemove);
           gameObjectsToRemove.clear();
         }
@@ -411,6 +499,8 @@ public class Game {
         });
 
         gameState = GameState.GAME_OVER;
+
+        notifyGameStateChange();
       }
     }
   }
@@ -449,5 +539,402 @@ public class Game {
     SwingUtilities.invokeLater(() -> {
       gamePanel.repaint();
     });
+  }
+
+  /**
+   * @return the gameState
+   */
+  public GameState getGameState() {
+    return gameState;
+  }
+
+  /**
+   * @param gameState the gameState to set
+   */
+  public void setGameState(GameState gameState) {
+    this.gameState = gameState;
+  }
+
+  /**
+   * @return the client
+   */
+  public Client getClient() {
+    return client;
+  }
+
+  /**
+   * @param client the client to set
+   */
+  public void setClient(Client client) {
+    this.client = client;
+  }
+
+  /**
+   * @return the server
+   */
+  public Server getServer() {
+    return server;
+  }
+
+  /**
+   * @param server the server to set
+   */
+  public void setServer(Server server) {
+    this.server = server;
+  }
+
+  /**
+   * @return the multiplayer
+   */
+  public boolean isMultiplayer() {
+    return multiplayer;
+  }
+
+  /**
+   * @param multiplayer the multiplayer to set
+   */
+  public void setMultiplayer(boolean multiplayer) {
+    this.multiplayer = multiplayer;
+  }
+
+  public void setupServer() {
+    // Check if server is already running
+    if (server != null && server.isRunning()) {
+      JOptionPane.showMessageDialog(gamePanel, "Server is already running!", "Error", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+
+    // Clean up objects and reset game state
+    forceClearEverything();
+
+    // Create server
+    server = new Server(this);
+    server.start();
+
+    JOptionPane.showMessageDialog(gamePanel, "Server running on port " + config.getProperty(Config.Key.SERVER_PORT),
+        "Server Started",
+        JOptionPane.INFORMATION_MESSAGE);
+  }
+
+  public void setupClient() {
+    // Check if client is already connected
+    if (client != null && client.isConnected()) {
+      JOptionPane.showMessageDialog(gamePanel, "Client is already connected!", "Error", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+
+    String username = JOptionPane.showInputDialog(gamePanel, "Enter your username :", "Player");
+
+    Color primaryColor = null;
+    Color secondaryColor = null;
+
+    {
+      final JColorChooser col = new JColorChooser(new Color(0x96a2b3));
+      int res = JOptionPane.showConfirmDialog(gamePanel, col, "Choose your primary color",
+          JOptionPane.OK_CANCEL_OPTION);
+      if (res == JOptionPane.OK_OPTION) {
+        primaryColor = col.getColor();
+        System.out.printf("Chosen color: #%06X\n", (primaryColor.getRGB() & 0xFFFFFF));
+      } else {
+        System.out.println("No color chosen, using default.");
+      }
+    }
+
+    {
+      final JColorChooser col = new JColorChooser(new Color(0x596070));
+      int res = JOptionPane.showConfirmDialog(gamePanel, col, "Choose your secondary color",
+          JOptionPane.OK_CANCEL_OPTION);
+      if (res == JOptionPane.OK_OPTION) {
+        secondaryColor = col.getColor();
+        System.out.printf("Chosen color: #%06X\n", (secondaryColor.getRGB() & 0xFFFFFF));
+      } else {
+        System.out.println("No color chosen, using default.");
+      }
+    }
+
+    String serverAddress = JOptionPane.showInputDialog(gamePanel, "Enter server address and port :",
+        "localhost:" + config.getProperty(Config.Key.SERVER_PORT));
+
+    if (serverAddress == null || serverAddress.isEmpty()) {
+      JOptionPane.showMessageDialog(gamePanel, "Invalid server address!", "Error", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+
+    String[] parts = serverAddress.split(":");
+    if (parts.length != 2) {
+      JOptionPane.showMessageDialog(gamePanel, "Invalid server address format! Use IP:PORT", "Error",
+          JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+
+    serverAddress = parts[0];
+    int port;
+    try {
+      port = Integer.parseInt(parts[1]);
+    } catch (NumberFormatException e) {
+      JOptionPane.showMessageDialog(gamePanel, "Invalid port number!", "Error", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+
+    if (port < 1 || port > 65535) {
+      JOptionPane.showMessageDialog(gamePanel, "Port number must be between 1 and 65535!", "Error",
+          JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+
+    // Create client
+    try {
+      client = new Client(this, serverAddress, port, username, primaryColor, secondaryColor);
+      client.start();
+    } catch (Exception e) {
+      e.printStackTrace();
+
+      JOptionPane.showMessageDialog(gamePanel, "Failed to connect to server: " + e.getMessage(), "Error",
+          JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+
+    JOptionPane.showMessageDialog(gamePanel, "Connected to server at " + serverAddress, "Client Connected",
+        JOptionPane.INFORMATION_MESSAGE);
+
+    PlayerMP playerMP = new PlayerMP(username, primaryColor, secondaryColor, new ArrayList<>(), null, -1);
+
+    // Request initial game state from server
+    LoginPacket loginPacket = new LoginPacket(username, -1, primaryColor, secondaryColor);
+
+    if (isServerRunning()) {
+      initPlayerAndObjects(playerMP, (server.getConnectedPlayers().size() + 1) % 2, true);
+
+      setMultiplayer(true);
+
+      server.parsePacket(
+          new LoginPacket(username, (server.getConnectedPlayers().size() + 1) % 2, primaryColor, secondaryColor)
+              .getData(),
+          null, -1);
+
+      // Add to server
+      server.addConnection(playerMP, new LoginPacket(username, 1, primaryColor, secondaryColor));
+
+      synchronized (gameObjectsLock) {
+        getPlayers().add(playerMP);
+      }
+
+      return;
+    }
+
+    forceClearEverything();
+
+    initPlayerAndObjects(playerMP, 1, true);
+
+    synchronized (gameObjectsLock) {
+      getPlayers().add(playerMP);
+    }
+
+    loginPacket.writeData(client);
+
+    setMultiplayer(true);
+  }
+
+  private void forceClearEverything() {
+    // Clean up objects and reset game state
+    synchronized (gameObjectsLock) {
+      gameObjects.clear();
+      gameObjectsToAdd.clear();
+      gameObjectsToRemove.clear();
+      players.clear();
+
+      initBase();
+
+      gameState = GameState.PAUSED;
+    }
+  }
+
+  public void clientDisconnect() {
+    // Check if client is connected
+    if (client == null || !client.isConnected()) {
+      JOptionPane.showMessageDialog(gamePanel, "Client is not connected!", "Error", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+
+    // Disconnect client
+    client.disconnect();
+    client = null;
+
+    if (!isServerRunning()) {
+      clearEverything();
+      initGameObjects();
+      gameState = GameState.PAUSED;
+    }
+  }
+
+  public void stopServer() {
+    // Check if server is running
+    if (isServerRunning()) {
+      JOptionPane.showMessageDialog(gamePanel, "Server is not running!", "Error", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+
+    // Stop server
+    server.stopServer();
+    server = null;
+
+    forceClearEverything();
+    initGameObjects();
+    gameState = GameState.PAUSED;
+
+    JOptionPane.showMessageDialog(gamePanel, "Server stopped.", "Server Stopped", JOptionPane.INFORMATION_MESSAGE);
+  }
+
+  public void gracefulExit() {
+    // Perform any cleanup operations here
+    setRunning(false);
+
+    // Disconnect client if connected
+    if (client != null && client.isConnected()) {
+      client.disconnect();
+    }
+
+    // Stop server if running
+    if (server != null && server.isRunning()) {
+      server.stopServer();
+    }
+
+    // Exit application
+    System.exit(0);
+  }
+
+  public void clearEverything() {
+    // Clean up objects and reset game state if not running server
+    if (!isServerRunning())
+      forceClearEverything();
+
+    gameState = GameState.PAUSED;
+  }
+
+  public boolean isServerRunning() {
+    return server != null && server.isRunning();
+  }
+
+  public void updateMovements(MovementsPacket packet, String username) {
+    synchronized (gameObjectsLock) {
+      for (PlatformDTO platformDTO : packet.getPlatforms()) {
+        for (GameObject obj : gameObjects) {
+          if (obj instanceof Platform) {
+            Platform platform = (Platform) obj;
+            if (platform.getPlayer().getName().equals(platformDTO.playerName())
+                && !platform.getPlayer().getName().equals(username)) {
+              platform.setPosition(new Vector2(platformDTO.x(), platformDTO.y()));
+              platform.setVelocity(new Vector2(platformDTO.vx(), platformDTO.vy()));
+            }
+          }
+        }
+      }
+
+      // Update ball position
+      if (packet.getBall() != null) {
+        for (GameObject obj : gameObjects) {
+          if (obj instanceof Ball) {
+            Ball ball = (Ball) obj;
+            ball.setPosition(new Vector2(packet.getBall().x(), packet.getBall().y()));
+            ball.setVelocity(new Vector2(packet.getBall().vx(), packet.getBall().vy()));
+          }
+        }
+      }
+    }
+  }
+
+  public void updateGameStateFromSnapshot(SnapshotPacket packet) {
+    synchronized (gameObjectsLock) {
+      // Update game objects based on the snapshot data
+
+      // Update chess pieces
+      // Clear existing chess pieces
+      gameObjects.removeIf(obj -> obj instanceof ChessPiece);
+
+      HashMap<String, Player> playerMap = new HashMap<>();
+      for (Player player : players) {
+        playerMap.put(player.getName(), player);
+      }
+
+      // Recreate chess pieces from snapshot
+      for (var chessPieceDTO : packet.getChessPieces()) {
+        if (chessPieceDTO == null)
+          continue;
+
+        Player owner = playerMap.get(chessPieceDTO.playerName());
+
+        if (owner != null) {
+          ChessPiece piece = new ChessPiece(this,
+              new Vector2(chessPieceDTO.x(), chessPieceDTO.y()),
+              owner,
+              ChessPieceType.valueOf(chessPieceDTO.type()));
+
+          gameObjects.add(piece);
+          owner.getChessPieces().add(piece);
+        }
+      }
+
+      // Update colors of players
+      for (var playerDTO : packet.getPlayers()) {
+        if (playerDTO == null)
+          continue;
+
+        Player player = playerMap.get(playerDTO.name());
+        if (player != null) {
+          player.setPrimaryColor(new Color(playerDTO.color1()));
+          player.setSecondaryColor(new Color(playerDTO.color2()));
+        }
+      }
+
+      sortGameObjectsByPriority();
+    }
+  }
+
+  public void registerOtherPlayer(String username, int whiteOrBlack, Color color1, Color color2) {
+    Player otherPlayer = new Player(username, color1, color2, new ArrayList<>());
+
+    initPlayerAndObjects(otherPlayer, whiteOrBlack, false);
+
+    synchronized (gameObjectsLock) {
+      // Remove existing player with the same username
+      getPlayers().stream().filter(e -> e.getName().equals(username)).findAny().ifPresent((p) -> {
+        p.getChessPieces().forEach(piece -> getGameObjects().remove(piece));
+        p.getPlatform().freeListeners();
+        getGameObjects().remove(p.getPlatform());
+        getPlayers().remove(p);
+
+        sortGameObjectsByPriority();
+      });
+
+      getPlayers().add(otherPlayer);
+    }
+  }
+
+  public void clearPlayerObjects(Player player) {
+    synchronized (gameObjectsLock) {
+      // Remove existing player with the same username
+      getPlayers().stream().filter(e -> e.getName().equals(player.getName())).findAny().ifPresent((p) -> {
+        p.getChessPieces().forEach(piece -> getGameObjects().remove(piece));
+        p.getPlatform().freeListeners();
+        getGameObjects().remove(p.getPlatform());
+
+        sortGameObjectsByPriority();
+      });
+    }
+  }
+
+  public Ball getGameBall() {
+    synchronized (gameObjectsLock) {
+      for (GameObject obj : gameObjects) {
+        if (obj instanceof Ball) {
+          return (Ball) obj;
+        }
+      }
+      return null;
+    }
+  }
+
+  public void updateMovements(MovementsPacket platformPacket) {
+    updateMovements(platformPacket, "");
   }
 }

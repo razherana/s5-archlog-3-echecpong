@@ -21,20 +21,39 @@ public class Platform extends GameObject {
       float platformSpeed) {
     super(game, position, 4);
     this.player = player;
+    player.setPlatform(this);
 
     this.platformSpeed = platformSpeed;
 
-    String[] keys = platformKeysString.split(",");
-    platformKeys = new int[keys.length];
-    for (int i = 0; i < keys.length; i++) {
-      try {
-        platformKeys[i] = Integer.parseInt(keys[i].trim());
-      } catch (Exception e) {
-        throw new RuntimeException("Failed to parse control for platform : " + keys[i].trim());
+    if (platformKeysString != null) {
+      String[] keys = platformKeysString.split(",");
+      platformKeys = new int[keys.length];
+      for (int i = 0; i < keys.length; i++) {
+        try {
+          platformKeys[i] = Integer.parseInt(keys[i].trim());
+        } catch (Exception e) {
+          throw new RuntimeException("Failed to parse control for platform : " + keys[i].trim());
+        }
       }
+    } else {
+      platformKeys = new int[] { -1, -1 };
     }
 
     setSize(new Vector2(width, height));
+  }
+
+  /**
+   * @param velocity the velocity to set
+   */
+  public void setVelocity(Vector2 velocity) {
+    this.velocity = velocity;
+  }
+
+  /**
+   * @return the velocity
+   */
+  public Vector2 getVelocity() {
+    return velocity;
   }
 
   @Override

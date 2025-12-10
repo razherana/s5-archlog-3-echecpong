@@ -65,4 +65,10 @@ public class KeyboardAdapter extends KeyAdapter {
   public Game getGame() {
     return game;
   }
+
+  public void removeListener(GameKeyListener keyListener) {
+    synchronized (gameKeyListenersLock) {
+      gameKeyListeners.remove(keyListener);
+    }
+  }
 }

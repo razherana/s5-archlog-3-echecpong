@@ -5,12 +5,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 import mg.razherana.game.logic.objects.chesspiece.ChessPiece;
+import mg.razherana.game.logic.objects.platform.Platform;
 
 public class Player {
   private String name;
   private List<ChessPiece> chessPieces = new ArrayList<>();
   private Color primaryColor;
   private Color secondaryColor;
+  private Platform platform;
+  private int whiteOrBlack;
 
   /**
    * @param name
@@ -77,6 +80,34 @@ public class Player {
    */
   public void setSecondaryColor(Color secondaryColor) {
     this.secondaryColor = secondaryColor;
+  }
+
+  /**
+   * @return the platform
+   */
+  public Platform getPlatform() {
+    return platform;
+  }
+
+  /**
+   * @param platform the platform to set
+   */
+  public void setPlatform(Platform platform) {
+    this.platform = platform;
+  }
+
+  /**
+   * @return the whiteOrBlack
+   */
+  public int getWhiteOrBlack() {
+    return whiteOrBlack;
+  }
+
+  /**
+   * @param whiteOrBlack the whiteOrBlack to set
+   */
+  public void setWhiteOrBlack(int whiteOrBlack) {
+    this.whiteOrBlack = whiteOrBlack;
   }
 
 }

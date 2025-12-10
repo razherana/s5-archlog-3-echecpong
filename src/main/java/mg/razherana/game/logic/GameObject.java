@@ -16,6 +16,7 @@ public abstract class GameObject {
   private final Game game;
 
   private final int priority;
+  private GameKeyListener keyListener;
 
   /**
    * @return the priority
@@ -44,7 +45,7 @@ public abstract class GameObject {
   }
 
   private void registerListeners() {
-    getGame().getKeyboardAdapter().addListener(new GameKeyListener() {
+    keyListener = new GameKeyListener() {
       @Override
       public void onKeyPressed(int keyCode, KeyboardAdapter keyboardAdapter) {
         GameObject.this.onKeyPressed(keyCode, keyboardAdapter);
@@ -54,7 +55,8 @@ public abstract class GameObject {
       public void onKeyReleased(int keyCode, KeyboardAdapter keyboardAdapter) {
         GameObject.this.onKeyReleased(keyCode, keyboardAdapter);
       }
-    });
+    };
+    getGame().getKeyboardAdapter().addListener(keyListener);
   }
 
   public abstract void update(double deltaTime);
@@ -96,6 +98,10 @@ public abstract class GameObject {
    */
   public void onKeyReleased(int keyCode, KeyboardAdapter keyboardAdapter) {
     // Default implementation does nothing
+  }
+
+  public void freeListeners() {
+    getGame().getKeyboardAdapter().removeListener(keyListener);
   }
 
   public boolean isCollidingWith(GameObject other) {

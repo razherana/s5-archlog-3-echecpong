@@ -16,6 +16,18 @@ public class Vector2 {
     this.y = y;
   }
 
+  public static Vector2 from(String str) {
+    String[] parts = str.split(",");
+    if (parts.length != 2) {
+      throw new IllegalArgumentException("Invalid vector string: " + str);
+    }
+
+    float x = Float.parseFloat(parts[0].trim());
+    float y = Float.parseFloat(parts[1].trim());
+
+    return new Vector2(x, y);
+  }
+
   public Vector2 add(Vector2 other) {
     return new Vector2(this.x + other.x, this.y + other.y);
   }

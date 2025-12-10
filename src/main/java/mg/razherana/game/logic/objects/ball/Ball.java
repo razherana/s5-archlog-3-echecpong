@@ -17,7 +17,9 @@ public class Ball extends GameObject {
   public static final int RADIUS = 25;
   public static final float DIAMETER = RADIUS * 2;
 
+  static final float ANIMATION_FRAME_DURATION = 0.05f; // Duration of each frame in seconds
   Vector2 velocity = new Vector2(0, 0);
+
   Vector2 baseVelocity;
   float damage = 1f;
 
@@ -26,7 +28,7 @@ public class Ball extends GameObject {
   int animationFrame = 0;
   float animationTimer = 0f;
 
-  static final float ANIMATION_FRAME_DURATION = 0.05f; // Duration of each frame in seconds
+  private Ellipse2D.Float rest = null;
 
   public Ball(Game game, Vector2 position, float damage, float speedX, float speedY) {
     super(game, position, 2);
@@ -35,6 +37,13 @@ public class Ball extends GameObject {
     this.baseVelocity = new Vector2(speedX, speedY);
 
     setSize(new Vector2(RADIUS * 2, RADIUS * 2));
+  }
+
+  /**
+   * @param velocity the velocity to set
+   */
+  public void setVelocity(Vector2 velocity) {
+    this.velocity = velocity;
   }
 
   @Override
@@ -74,8 +83,6 @@ public class Ball extends GameObject {
       animationTimer = 0f;
     }
   }
-
-  private Ellipse2D.Float rest = null;
 
   @Override
   public void render(Graphics2D g2d) {
@@ -215,6 +222,10 @@ public class Ball extends GameObject {
       velocity.x = baseVelocity.x * randomFactorX;
       velocity.y = baseVelocity.y * randomFactorY;
     }
+  }
+
+  public Vector2 getVelocity() {
+    return velocity;
   }
 
 }
