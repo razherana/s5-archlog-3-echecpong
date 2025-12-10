@@ -7,6 +7,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.concurrent.ScheduledFuture;
 
 import javax.swing.JOptionPane;
 
@@ -28,7 +29,7 @@ public class Client extends Thread {
   private DatagramSocket socket;
   private final Game game;
 
-  private Thread platformSnapshotSender;
+  private ScheduledFuture<?> platformSnapshotSender;
 
   private String username;
   private Color primaryColor;
@@ -58,8 +59,6 @@ public class Client extends Thread {
       MovementsPacket packet = new MovementsPacket(game, this.getUsername());
       sendData(packet.getData());
     });
-
-    platformSnapshotSender.start();
 
     while (running) {
       byte[] data = new byte[1500];
@@ -221,7 +220,7 @@ public class Client extends Thread {
       socket = null;
 
       this.interrupt();
-      platformSnapshotSender.interrupt();
+      platformSnapshotSender.cancel(true);
     }
 
     System.out.println("[MP/Client] : Client disconnected from port " + port);

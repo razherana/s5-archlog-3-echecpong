@@ -75,7 +75,6 @@ public abstract class GameObject {
    */
   public void onCollision(GameObject other) {
     // Default implementation does nothing
-    System.out.println("[Collision] " + this + " colliding with " + other);
   }
 
   /**

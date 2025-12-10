@@ -2,10 +2,15 @@ package mg.razherana.game.logic.objects.platform;
 
 import java.awt.BasicStroke;
 import java.awt.Graphics2D;
+import java.awt.geom.Rectangle2D;
+
 import mg.razherana.game.Game;
 import mg.razherana.game.logic.GameObject;
 import mg.razherana.game.logic.listeners.KeyboardAdapter;
+import mg.razherana.game.logic.objects.board.BoardBorder;
 import mg.razherana.game.logic.players.Player;
+import mg.razherana.game.logic.utils.Collision;
+import mg.razherana.game.logic.utils.Collision.CollisionSidesResult;
 import mg.razherana.game.logic.utils.Vector2;
 
 public class Platform extends GameObject {
@@ -89,6 +94,42 @@ public class Platform extends GameObject {
     g2d.setStroke(new BasicStroke(3));
 
     g2d.draw(rect);
+  }
+
+  @Override
+  public void onCollision(GameObject other) {
+    // Check if the other object is a BoardBorder
+    if (other instanceof BoardBorder) {
+      var thisBounds = getDefaultBounds();
+      // Get the collision sides
+
+      Rectangle2D.Float[] borders = ((BoardBorder) other).getBorders();
+
+      // Check which border we collided with
+      Rectangle2D.Float borderCollided = null;
+      for (Rectangle2D.Float border : borders) {
+        if (border.intersects(thisBounds)) {
+          borderCollided = border;
+          break;
+        }
+      }
+
+      if (borderCollided == null)
+        return;
+
+      CollisionSidesResult sides = Collision.collideSides(
+          thisBounds,
+          velocity.x, velocity.y,
+          borderCollided,
+          0, 0);
+
+      // Reflect velocity based on collision sides
+      if (!sides.collided())
+        return;
+
+      // Correct position
+      setPosition(new Vector2(sides.correctedX(), sides.correctedY()));
+    }
   }
 
   /**

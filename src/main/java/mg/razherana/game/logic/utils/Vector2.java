@@ -69,4 +69,9 @@ public class Vector2 {
   public String toString() {
     return "Vector2(" + x + ", " + y + ")";
   }
+
+  public void set(float x, float y) {
+    this.x = x;
+    this.y = y;
+  }
 }

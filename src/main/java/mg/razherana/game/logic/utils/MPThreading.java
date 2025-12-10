@@ -1,5 +1,10 @@
 package mg.razherana.game.logic.utils;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
 import mg.razherana.game.net.Client;
 import mg.razherana.game.net.Server;
 
@@ -7,36 +12,56 @@ public class MPThreading {
   private MPThreading() {
   }
 
-  public static Thread generateClientThread(Client client, Config.Key key, Runnable callback) {
-    return new Thread(() -> {
-      while (client.isConnected() && client.isRunning()) {
-        try {
-          Thread.sleep(1000 / Integer.parseInt(client.getGame().getConfig().getProperty(key)));
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
+  public static ScheduledFuture<?> generateClientThread(
+      Client client, Config.Key key, Runnable callback) {
 
-        if (client.isConnected() && client.isRunning()) {
-          callback.run();
-        }
-      }
-    });
+    ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+
+    int delayMs = Integer.parseInt(client.getGame().getConfig().getProperty(key));
+
+    ScheduledFuture<?> future = executor.scheduleAtFixedRate(
+        () -> {
+          if (client.isConnected() && client.isRunning()) {
+            callback.run();
+          } else {
+            // Stop the scheduler if client is disconnected
+            executor.shutdown();
+          }
+        },
+        0, // initial delay
+        delayMs,
+        TimeUnit.MILLISECONDS);
+
+    // Return the future so you can cancel it if needed
+    return future;
   }
 
-  public static Thread generateServerThread(Server server, Config.Key key, Runnable callback) {
-    return new Thread(() -> {
-      while (server.isRunning()) {
-        try {
-          Thread.sleep(1000 / Integer
-              .parseInt(server.getGame().getConfig().getProperty(Config.Key.SERVER_SNAPSHOT_RATE)));
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
+  public static ScheduledFuture<?> generateServerThread(
+      Server server, Config.Key key, Runnable callback) {
 
-        // Send snapshot to all clients
-        if (server.isRunning())
-          callback.run();
-      }
-    });
+    ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+
+    int delayMs = Integer.parseInt(
+        server.getGame().getConfig().getProperty(key));
+
+    ScheduledFuture<?> future = executor.scheduleAtFixedRate(
+        () -> {
+          if (server.isRunning()) {
+            try {
+              callback.run();
+            } catch (Exception e) {
+              // Log any errors but don't stop the thread
+              e.printStackTrace();
+            }
+          } else {
+            // Server stopped, shutdown the executor
+            executor.shutdown();
+          }
+        },
+        0, // initial delay
+        delayMs,
+        TimeUnit.MILLISECONDS);
+
+    return future;
   }
 }

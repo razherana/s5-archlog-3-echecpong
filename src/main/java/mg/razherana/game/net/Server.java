@@ -6,6 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.concurrent.ScheduledFuture;
 
 import mg.razherana.game.Game;
 import mg.razherana.game.GameState;
@@ -23,9 +24,9 @@ import mg.razherana.game.net.packets.SnapshotPacket;
 public class Server extends Thread {
   private DatagramSocket socket;
   public Game game;
-  private Thread snapshotThread;
-  private Thread randomMovementThread;
-  private Thread platformThread;
+  private ScheduledFuture<?> snapshotThread;
+  private ScheduledFuture<?> randomMovementThread;
+  private ScheduledFuture<?> platformThread;
   private ArrayList<PlayerMP> connectedPlayers = new ArrayList<>();
 
   private volatile boolean running = false;
@@ -79,15 +80,12 @@ public class Server extends Thread {
 
     snapshotThread = MPThreading.generateServerThread(this, Config.Key.SERVER_SNAPSHOT_RATE,
         this::sendSnapshotToAllClients);
-    snapshotThread.start();
 
     platformThread = MPThreading.generateServerThread(this, Config.Key.SERVER_PLATFORM_SNAPSHOT_RATE,
         this::sendMovementsSnapshotToAllClients);
-    platformThread.start();
 
     randomMovementThread = MPThreading.generateServerThread(this, Config.Key.SERVER_RANDOM_RATE,
         this::sendRandomMovementToAllClients);
-    randomMovementThread.start();
 
     System.out.println("[MP/Server] : Server started on port " + socket.getLocalPort());
 
@@ -238,9 +236,9 @@ public class Server extends Thread {
       socket = null;
       running = false;
 
-      platformThread.interrupt();
-      randomMovementThread.interrupt();
-      platformThread.interrupt();
+      snapshotThread.cancel(true);
+      randomMovementThread.cancel(true);
+      platformThread.cancel(true);
 
       this.interrupt();
 

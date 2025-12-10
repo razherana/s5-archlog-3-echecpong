@@ -817,14 +817,28 @@ public class Game {
 
   public void updateMovements(MovementsPacket packet, String username) {
     synchronized (gameObjectsLock) {
-      for (PlatformDTO platformDTO : packet.getPlatforms()) {
-        for (GameObject obj : gameObjects) {
+      PlatformDTO[] platforms = packet.getPlatforms();
+      int platformCount = platforms.length;
+      int gameObjectCount = gameObjects.size();
+
+      for (int i = 0; i < platformCount; i++) {
+        PlatformDTO platformDTO = platforms[i];
+        if (platformDTO == null)
+          continue;
+
+        if (platformDTO.playerName().equals(username)) {
+          continue;
+        }
+
+        for (int j = 0; j < gameObjectCount; j++) {
+          GameObject obj = gameObjects.get(j);
           if (obj instanceof Platform) {
             Platform platform = (Platform) obj;
-            if (platform.getPlayer().getName().equals(platformDTO.playerName())
-                && !platform.getPlayer().getName().equals(username)) {
-              platform.setPosition(new Vector2(platformDTO.x(), platformDTO.y()));
-              platform.setVelocity(new Vector2(platformDTO.vx(), platformDTO.vy()));
+            if (platform.getPlayer().getName().equals(platformDTO.playerName())) {
+              // Reuse vector objects instead of creating new ones
+              platform.getPosition().set(platformDTO.x(), platformDTO.y());
+              platform.getVelocity().set(platformDTO.vx(), platformDTO.vy());
+              break;
             }
           }
         }
