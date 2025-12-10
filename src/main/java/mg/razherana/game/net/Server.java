@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import mg.razherana.game.Game;
 import mg.razherana.game.GameState;
 import mg.razherana.game.logic.utils.Config;
+import mg.razherana.game.logic.utils.MPThreading;
 import mg.razherana.game.net.packets.ErrorPacket;
 import mg.razherana.game.net.packets.GameStatePacket;
 import mg.razherana.game.net.packets.LoginPacket;
@@ -22,66 +23,9 @@ import mg.razherana.game.net.packets.SnapshotPacket;
 public class Server extends Thread {
   private DatagramSocket socket;
   public Game game;
-  private ServerSnapshotThread snapshotThread;
-  private RandomMovementThread randomMovementThread;
-
-  class RandomMovementThread extends Thread {
-    @Override
-    public void run() {
-      while (running && isRunning()) {
-        try {
-          Thread.sleep(1000 / Integer
-              .parseInt(game.getConfig().getProperty(Config.Key.SERVER_RANDOM_RATE)));
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-
-        // Send snapshot to all clients
-        if (running && isRunning())
-          sendRandomMovementToAllClients();
-      }
-    }
-  }
-
-  class ServerSnapshotThread extends Thread {
-    @Override
-    public void run() {
-      while (running && isRunning()) {
-        try {
-          Thread.sleep(1000 / Integer
-              .parseInt(game.getConfig().getProperty(Config.Key.SERVER_SNAPSHOT_RATE)));
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-
-        // Send snapshot to all clients
-        if (running && isRunning())
-          sendSnapshotToAllClients();
-      }
-    }
-
-  }
-
-  private ServerPlatformThread platformThread;
-
-  class ServerPlatformThread extends Thread {
-    @Override
-    public void run() {
-      while (running && isRunning()) {
-        try {
-          Thread.sleep(1000 / Integer
-              .parseInt(game.getConfig().getProperty(Config.Key.SERVER_PLATFORM_SNAPSHOT_RATE)));
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-
-        // Send platform snapshot to all clients
-        if (running && isRunning())
-          sendMovementsSnapshotToAllClients();
-      }
-    }
-  }
-
+  private Thread snapshotThread;
+  private Thread randomMovementThread;
+  private Thread platformThread;
   private ArrayList<PlayerMP> connectedPlayers = new ArrayList<>();
 
   private volatile boolean running = false;
@@ -93,6 +37,13 @@ public class Server extends Thread {
     } catch (SocketException e) {
       e.printStackTrace();
     }
+  }
+
+  /**
+   * @return the game
+   */
+  public Game getGame() {
+    return game;
   }
 
   public void sendRandomMovementToAllClients() {
@@ -126,13 +77,16 @@ public class Server extends Thread {
   public void run() {
     running = true;
 
-    snapshotThread = new ServerSnapshotThread();
+    snapshotThread = MPThreading.generateServerThread(this, Config.Key.SERVER_SNAPSHOT_RATE,
+        this::sendSnapshotToAllClients);
     snapshotThread.start();
 
-    platformThread = new ServerPlatformThread();
+    platformThread = MPThreading.generateServerThread(this, Config.Key.SERVER_PLATFORM_SNAPSHOT_RATE,
+        this::sendMovementsSnapshotToAllClients);
     platformThread.start();
 
-    randomMovementThread = new RandomMovementThread();
+    randomMovementThread = MPThreading.generateServerThread(this, Config.Key.SERVER_RANDOM_RATE,
+        this::sendRandomMovementToAllClients);
     randomMovementThread.start();
 
     System.out.println("[MP/Server] : Server started on port " + socket.getLocalPort());
@@ -281,7 +235,12 @@ public class Server extends Thread {
   public void stopServer() {
     if (socket != null && !socket.isClosed()) {
       socket.close();
+      socket = null;
       running = false;
+
+      platformThread.interrupt();
+      randomMovementThread.interrupt();
+      platformThread.interrupt();
 
       this.interrupt();
 

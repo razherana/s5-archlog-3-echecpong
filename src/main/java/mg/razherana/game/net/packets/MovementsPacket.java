@@ -6,6 +6,7 @@ import mg.razherana.game.logic.objects.platform.Platform;
 public class MovementsPacket extends Packet {
   public record BallDTO(float x, float y, float vx, float vy) {
   }
+
   public record PlatformDTO(String playerName, float x, float y, float vx, float vy) {
   }
 
@@ -74,6 +75,26 @@ public class MovementsPacket extends Packet {
     }
   }
 
+  // Client data
+  public MovementsPacket(Game game, String username) {
+    super(PacketType.MOVEMENTS_PLATFORM.getPacketId());
+
+    // Gather platform positions
+
+    synchronized (game.getGameObjectsLock()) {
+      platforms = game.getGameObjects().stream()
+          .filter(obj -> obj instanceof Platform platform && platform.getPlayer().getName().equals(username))
+          .map(obj -> (Platform) obj)
+          .map(obj -> new PlatformDTO(obj.getPlayer().getName(), obj.getPosition().x, obj.getPosition().y,
+              obj.getVelocity().x,
+              obj.getVelocity().y))
+          .toArray(PlatformDTO[]::new);
+
+      // Gather ball position
+      ball = null;
+    }
+  }
+
   /**
    * @param ball the ball to set
    */
@@ -96,7 +117,8 @@ public class MovementsPacket extends Packet {
 
     data.append("|");
 
-    data.append(ball.x()).append(",").append(ball.y()).append(",").append(ball.vx()).append(",").append(ball.vy());
+    if (ball != null)
+      data.append(ball.x()).append(",").append(ball.y()).append(",").append(ball.vx()).append(",").append(ball.vy());
 
     return data.toString().getBytes();
   }

@@ -13,6 +13,7 @@ import javax.swing.JOptionPane;
 import mg.razherana.game.Game;
 import mg.razherana.game.GameState;
 import mg.razherana.game.logic.utils.Config;
+import mg.razherana.game.logic.utils.MPThreading;
 import mg.razherana.game.net.packets.ErrorPacket;
 import mg.razherana.game.net.packets.GameStatePacket;
 import mg.razherana.game.net.packets.LoginPacket;
@@ -27,25 +28,7 @@ public class Client extends Thread {
   private DatagramSocket socket;
   private final Game game;
 
-  private PlatformSnapshotSender platformSnapshotSender;
-
-  class PlatformSnapshotSender extends Thread {
-    @Override
-    public void run() {
-      while (isConnected() && isRunning()) {
-        try {
-          Thread.sleep(1000 / Integer.parseInt(game.getConfig().getProperty(Config.Key.SERVER_PLATFORM_SNAPSHOT_RATE)));
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-
-        if (isConnected() && isRunning()) {
-          MovementsPacket packet = new MovementsPacket(game);
-          sendData(packet.getData());
-        }
-      }
-    }
-  }
+  private Thread platformSnapshotSender;
 
   private String username;
   private Color primaryColor;
@@ -71,7 +54,11 @@ public class Client extends Thread {
     System.out.println("[MP/Client] : Client started on port " + port);
 
     // Start the platform snapshot sender thread
-    platformSnapshotSender = new PlatformSnapshotSender();
+    platformSnapshotSender = MPThreading.generateClientThread(this, Config.Key.SERVER_PLATFORM_SNAPSHOT_RATE, () -> {
+      MovementsPacket packet = new MovementsPacket(game, this.getUsername());
+      sendData(packet.getData());
+    });
+
     platformSnapshotSender.start();
 
     while (running) {
@@ -229,8 +216,13 @@ public class Client extends Thread {
   public void disconnect() {
     running = false;
 
-    if (isConnected())
+    if (isConnected()) {
       socket.close();
+      socket = null;
+
+      this.interrupt();
+      platformSnapshotSender.interrupt();
+    }
 
     System.out.println("[MP/Client] : Client disconnected from port " + port);
   }
