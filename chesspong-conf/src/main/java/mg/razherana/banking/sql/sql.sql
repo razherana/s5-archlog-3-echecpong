@@ -1,0 +1,67 @@
+-- Active: 1738011862925@@127.0.0.1@3306@s5_archlog_5_chesspong
+CREATE DATABASE s5_archlog_5_chesspong;
+
+CREATE TABLE `configurations` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(255) NOT NULL UNIQUE,
+    `value` TEXT NOT NULL
+);
+
+-- Insert values into configurations table
+INSERT INTO
+    `configurations` (`name`, `value`)
+VALUES
+    -- Chess piece values
+    ('LIFE_PAWN_WHITE', '1'),
+    ('LIFE_KNIGHT_WHITE', '3'),
+    ('LIFE_BISHOP_WHITE', '3'),
+    ('LIFE_ROOK_WHITE', '5'),
+    ('LIFE_QUEEN_WHITE', '9'),
+    ('LIFE_KING_WHITE', '1'),
+    ('LIFE_PAWN_BLACK', '1'),
+    ('LIFE_KNIGHT_BLACK', '3'),
+    ('LIFE_BISHOP_BLACK', '3'),
+    ('LIFE_ROOK_BLACK', '5'),
+    ('LIFE_QUEEN_BLACK', '9'),
+    ('LIFE_KING_BLACK', '1'),
+    ('PIECE_NUMBER', '8'),
+    ('BALL_SPEED_X', '100.0'),
+    ('BALL_SPEED_Y', '100.0'),
+    ('BALL_DAMAGE', '1.0'),
+    (
+        'MVT_SPEED_RANDOM_X',
+        '0.8,1.8'
+    ),
+    (
+        'MVT_SPEED_RANDOM_Y',
+        '0.8,1.8'
+    ),
+    ('PLATFORM_WIDTH', '80.0'),
+    ('PLATFORM_HEIGHT', '13.0'),
+    ('PLATFORM_SPEED', '300.0'),
+    (
+        'PLATFORM_COMMAND_PLAYER1',
+        '65,68'
+    ),
+    (
+        'PLATFORM_COMMAND_PLAYER2',
+        '37,39'
+    ),
+    (
+        'PLATFORM_POSITION_BLACK',
+        '120,107'
+    ),
+    (
+        'PLATFORM_POSITION_WHITE',
+        '120,200'
+    ),
+    ('SERVER_PORT', '3216'),
+    (
+        'SERVER_SNAPSHOT_RATE',
+        '1000'
+    ),
+    (
+        'SERVER_PLATFORM_SNAPSHOT_RATE',
+        '20'
+    ),
+    ('SERVER_RANDOM_RATE', '1000');
