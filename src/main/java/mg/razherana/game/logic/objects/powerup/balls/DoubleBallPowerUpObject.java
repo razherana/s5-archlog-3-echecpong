@@ -1,6 +1,8 @@
 package mg.razherana.game.logic.objects.powerup.balls;
 
 import java.awt.AlphaComposite;
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
 
 import mg.razherana.game.Game;
@@ -13,9 +15,9 @@ import mg.razherana.game.logic.utils.Vector2;
 public class DoubleBallPowerUpObject extends PowerUpObject<Ball> {
 
   private static final float ANIMATION_FRAME_DURATION = 0.075f;
-  private static final float DIAMETER_X = 30f;
-  private static final float DIAMETER_Y = 60f;
-  private static final float ALPHA = 0.3f;
+  private static final float DIAMETER_X = 40f;
+  private static final float DIAMETER_Y = 40f;
+  private static final float ALPHA = 0.7f;
 
   public DoubleBallPowerUpObject(Game game, Vector2 position) {
     super(game, position, new Vector2(DIAMETER_X, DIAMETER_Y), Ball.class);
@@ -35,6 +37,13 @@ public class DoubleBallPowerUpObject extends PowerUpObject<Ball> {
     g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, ALPHA));
 
     super.render(g2d);
+
+    g2d.setColor(Color.BLACK);
+    g2d.setFont(g2d.getFont().deriveFont(Font.BOLD, 20));
+
+    var strPosition = getPosition().add(getSize());
+
+    g2d.drawString("x2", strPosition.x, strPosition.y);
   }
 
   @Override
