@@ -10,6 +10,7 @@ public class MutlipleStateAnimation<T extends GameObject> extends Animation {
   private final T gameObject;
 
   private AnimationState<T> currentAnimationState = null;
+  private final AnimationState<T> fallbackAnimationState;
 
   /**
    * @param animationFrameDuration
@@ -19,28 +20,49 @@ public class MutlipleStateAnimation<T extends GameObject> extends Animation {
    */
   public MutlipleStateAnimation(T gameObject, float animationFrameDuration, BufferedImage animationSpriteSheet,
       Map<AnimationState<T>, AnimationAsset[]> mapAnimationAssets,
-      int tileSize) {
+      int tileSize,
+      AnimationState<T> fallbackAnimationState  
+    ) {
     super(animationFrameDuration, animationSpriteSheet, null, tileSize);
     this.mapAnimationAsset = mapAnimationAssets;
     this.gameObject = gameObject;
+    this.fallbackAnimationState = fallbackAnimationState;
+  }
+
+  private AnimationAsset[] getCurrentAnimationAssets() {
+    if(currentAnimationState == null)
+      currentAnimationState = fallbackAnimationState;
+
+    var animationAssets = mapAnimationAsset.get(currentAnimationState);
+    if (animationAssets == null) {
+      throw new IllegalStateException("Animation state is null!!! Current = " + currentAnimationState);
+    }
+
+    return animationAssets;
   }
 
   @Override
-  public void update(float deltaTime) {
+  protected int getAnimationLength() {
+    return getCurrentAnimationAssets().length;
+  }
+
+  @Override
+  public void update(double deltaTime) {
     // Do normal update
     super.update(deltaTime);
 
     // Then update the state
-    currentAnimationState.change(gameObject);
+    for (AnimationState<T> animationState : mapAnimationAsset.keySet())
+      if (animationState.change(gameObject)) {
+        currentAnimationState = animationState;
+        return;
+      }
+
+    currentAnimationState = fallbackAnimationState;
   }
 
   @Override
   public AnimationAsset getCurrentAnimationAsset() {
-    var animationState = mapAnimationAsset.get(currentAnimationState);
-    if (animationState == null) {
-      throw new IllegalStateException("Animation state is null!!! Current = " + currentAnimationState);
-    }
-
-    return animationState[currentAnimationFrame];
+    return getCurrentAnimationAssets()[currentAnimationFrame];
   }
 }

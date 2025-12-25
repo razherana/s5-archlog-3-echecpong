@@ -3,9 +3,14 @@ package mg.razherana.game.logic.objects.ball;
 import java.awt.Graphics2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
+import java.util.Map;
 
 import mg.razherana.game.Game;
 import mg.razherana.game.logic.GameObject;
+import mg.razherana.game.logic.animations.Animation;
+import mg.razherana.game.logic.animations.AnimationAsset;
+import mg.razherana.game.logic.animations.AnimationState;
+import mg.razherana.game.logic.animations.MutlipleStateAnimation;
 import mg.razherana.game.logic.objects.board.BoardBorder;
 import mg.razherana.game.logic.objects.chesspiece.ChessPiece;
 import mg.razherana.game.logic.objects.platform.Platform;
@@ -26,8 +31,6 @@ public class Ball extends GameObject {
 
   // Animation details
   BallMovementType movementType = BallMovementType.IDLE;
-  int animationFrame = 0;
-  float animationTimer = 0f;
 
   private Ellipse2D.Float rest = null;
 
@@ -37,7 +40,46 @@ public class Ball extends GameObject {
     this.velocity = new Vector2(speedX, speedY);
     this.baseVelocity = new Vector2(speedX, speedY);
 
+    Map<AnimationState<Ball>, AnimationAsset[]> entryOfAnimations = Map.ofEntries(
+        BallMovementType.BOTTOM_TO_TOP.getEntry(),
+        BallMovementType.DIAGONAL_BOTTOMLEFT_TO_TOPRIGHT.getEntry(),
+        BallMovementType.DIAGONAL_BOTTOMRIGHT_TO_TOPLEFT.getEntry(),
+        BallMovementType.DIAGONAL_TOPLEFT_TO_BOTTOMRIGHT.getEntry(),
+        BallMovementType.DIAGONAL_TOPRIGHT_TO_BOTTOMLEFT.getEntry(),
+        BallMovementType.LEFT_TO_RIGHT.getEntry(),
+        BallMovementType.RIGHT_TO_LEFT.getEntry(),
+        BallMovementType.TOP_TO_BOTTOM.getEntry(),
+        BallMovementType.IDLE.getEntry());
+
     setSize(new Vector2(RADIUS * 2, RADIUS * 2));
+
+    Animation animation = new MutlipleStateAnimation<Ball>(
+        this,
+        ANIMATION_FRAME_DURATION,
+        getGame().getAssets().getBallSpriteSheet(),
+        entryOfAnimations,
+        BallMovementType.TILE_SIZE,
+        BallMovementType.IDLE.getState());
+
+    animation.setMargins(new int[] {
+        20, 20, -40, -40
+    });
+
+    setAnimation(animation);
+  }
+
+  /**
+   * @return the damage
+   */
+  public float getDamage() {
+    return damage;
+  }
+
+  /**
+   * @param damage the damage to set
+   */
+  public void setDamage(float damage) {
+    this.damage = damage;
   }
 
   /**
@@ -49,53 +91,18 @@ public class Ball extends GameObject {
 
   @Override
   public void update(double deltaTime) {
+    updateAnimation(deltaTime);
+
     // Update ball position based on velocity
     Vector2 newPosition = getPosition().add(velocity.multiply((float) deltaTime));
 
     setPosition(newPosition);
-
-    // Determine movement type based on velocity
-    if (Math.abs(velocity.x) > Math.abs(velocity.y)) {
-      if (velocity.x < 0)
-        movementType = BallMovementType.RIGHT_TO_LEFT;
-      else
-        movementType = BallMovementType.LEFT_TO_RIGHT;
-    } else if (Math.abs(velocity.y) > Math.abs(velocity.x)) {
-      if (velocity.y < 0)
-        movementType = BallMovementType.BOTTOM_TO_TOP;
-      else
-        movementType = BallMovementType.TOP_TO_BOTTOM;
-    } else if (velocity.x < 0 && velocity.y < 0) {
-      movementType = BallMovementType.DIAGONAL_TOPLEFT_TO_BOTTOMRIGHT;
-    } else if (velocity.x > 0 && velocity.y < 0) {
-      movementType = BallMovementType.DIAGONAL_TOPRIGHT_TO_BOTTOMLEFT;
-    } else if (velocity.x < 0 && velocity.y > 0) {
-      movementType = BallMovementType.DIAGONAL_BOTTOMLEFT_TO_TOPRIGHT;
-    } else if (velocity.x > 0 && velocity.y > 0) {
-      movementType = BallMovementType.DIAGONAL_BOTTOMRIGHT_TO_TOPLEFT;
-    } else {
-      movementType = BallMovementType.IDLE;
-    }
-
-    // Update animation
-    animationTimer += deltaTime;
-    if (animationTimer >= ANIMATION_FRAME_DURATION) {
-      animationFrame = (animationFrame + 1) % BallMovementType.FRAME_COUNT;
-      animationTimer = 0f;
-    }
   }
 
   @Override
   public void render(Graphics2D g2d) {
     // Draw the ball using the appropriate animation frame
-    movementType.draw(
-        (int) getPosition().x,
-        (int) getPosition().y,
-        (int) getSize().x,
-        (int) getSize().y,
-        animationFrame,
-        g2d,
-        getGame().getAssets().getBallSpriteSheet());
+    renderAnimation(g2d);
 
     // Debug: draw collision bounds
     // g2d.setColor(new Color(255, 0, 0, 100));

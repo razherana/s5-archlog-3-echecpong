@@ -2,12 +2,14 @@ package mg.razherana.game.logic.objects.platform;
 
 import java.awt.BasicStroke;
 import java.awt.Graphics2D;
+import java.awt.event.KeyEvent;
 import java.awt.geom.Rectangle2D;
 
 import mg.razherana.game.Game;
 import mg.razherana.game.logic.GameObject;
 import mg.razherana.game.logic.listeners.KeyboardAdapter;
 import mg.razherana.game.logic.objects.board.BoardBorder;
+import mg.razherana.game.logic.objects.powerup.balls.DoubleBallPowerUpObject;
 import mg.razherana.game.logic.players.Player;
 import mg.razherana.game.logic.utils.Collision;
 import mg.razherana.game.logic.utils.Collision.CollisionSidesResult;
@@ -67,6 +69,15 @@ public class Platform extends GameObject {
       velocity.x = -platformSpeed;
     else if (keyboardAdapter.hasKey(platformKeys[1]))
       velocity.x = platformSpeed;
+
+    if(keyboardAdapter.hasKey(KeyEvent.VK_M)) {
+      // Create a test double powerup
+      Vector2 position = new Vector2(50, 120);
+
+      DoubleBallPowerUpObject powerUpObject = new DoubleBallPowerUpObject(getGame(), position);
+
+      getGame().addGameObject(powerUpObject);
+    }
   }
 
   @Override

@@ -1,6 +1,5 @@
 package mg.razherana.game.logic.objects.ui;
 
-import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
@@ -40,7 +39,7 @@ public class UIScreenTextScaleFade extends AbstractUIFade {
 
   @Override
   public void render(Graphics2D g2d) {
-    g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+    setAlpha(g2d);
     // Rendering logic would go here, using getCurrentScale() to determine the scale
     // of the text to render.
 

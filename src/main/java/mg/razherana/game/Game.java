@@ -932,8 +932,12 @@ public class Game {
       if (gameState == GameState.RUNNING) {
         // Thread-safe state updates
         gameObjects.forEach(obj -> {
-          if (!gameObjectsToRemove.contains(obj))
+          if (!gameObjectsToRemove.contains(obj)) {
             obj.update(deltaTime);
+
+            // Run timers of the gameObject
+            obj.runTimers(deltaTime);
+          }
         });
 
         handleCollisions();
@@ -960,6 +964,8 @@ public class Game {
 
         // Check for game over condition
         checkGameOver();
+
+        System.gc();
       }
     }
   }

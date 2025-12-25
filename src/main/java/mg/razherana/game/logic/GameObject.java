@@ -1,12 +1,17 @@
 package mg.razherana.game.logic;
 
 import java.awt.Graphics2D;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 import java.awt.geom.Rectangle2D;
 
 import mg.razherana.game.Game;
 import mg.razherana.game.logic.animations.Animation;
 import mg.razherana.game.logic.listeners.GameKeyListener;
 import mg.razherana.game.logic.listeners.KeyboardAdapter;
+import mg.razherana.game.logic.timers.GameObjectTimer;
+import mg.razherana.game.logic.timers.OnceGameObjectTimer;
 import mg.razherana.game.logic.utils.Vector2;
 
 public abstract class GameObject {
@@ -14,26 +19,15 @@ public abstract class GameObject {
   private Vector2 size = new Vector2(80, 80); // Default size, can be overridden
   private boolean collision = true;
 
+  private List<GameObjectTimer<? extends GameObject>> timerList = new ArrayList<>();
+
   private final Game game;
 
   private Animation animation;
 
   private final int priority;
+
   private GameKeyListener keyListener;
-
-  /**
-   * @return the priority
-   */
-  public int getPriority() {
-    return priority;
-  }
-
-  /**
-   * @return the game
-   */
-  public Game getGame() {
-    return game;
-  }
 
   public GameObject(Game game, int priority) {
     this(game, new Vector2(0, 0), priority);
@@ -47,19 +41,40 @@ public abstract class GameObject {
     registerListeners();
   }
 
-  private void registerListeners() {
-    keyListener = new GameKeyListener() {
+  public <T extends GameObject> void addOnceTimer(Consumer<T> consumer, final float endTime) {
+    timerList.add(new OnceGameObjectTimer<GameObject>(this, endTime) {
+      @SuppressWarnings("unchecked")
       @Override
-      public void onKeyPressed(int keyCode, KeyboardAdapter keyboardAdapter) {
-        GameObject.this.onKeyPressed(keyCode, keyboardAdapter);
+      protected void onTick() {
+        consumer.accept((T) GameObject.this);
       }
+    });
+  }
 
-      @Override
-      public void onKeyReleased(int keyCode, KeyboardAdapter keyboardAdapter) {
-        GameObject.this.onKeyReleased(keyCode, keyboardAdapter);
-      }
-    };
-    getGame().getKeyboardAdapter().addListener(keyListener);
+  public <T extends GameObject> void addTimer(GameObjectTimer<T> onceGameObjectTimer) {
+    timerList.add(onceGameObjectTimer);
+  }
+
+  public void runTimers(double deltaTime) {
+    timerList.forEach(t -> {
+      t.updateCurrentTime(deltaTime);
+    });
+
+    timerList.removeIf(timer -> timer.isDone());
+  }
+
+  /**
+   * @return the priority
+   */
+  public int getPriority() {
+    return priority;
+  }
+
+  /**
+   * @return the game
+   */
+  public Game getGame() {
+    return game;
   }
 
   public abstract void update(double deltaTime);
@@ -88,7 +103,7 @@ public abstract class GameObject {
    * 
    * @param deltaTime
    */
-  public void updateAnimation(float deltaTime) {
+  public void updateAnimation(double deltaTime) {
     getAnimation().update(deltaTime);
   }
 
@@ -201,5 +216,20 @@ public abstract class GameObject {
    */
   public void setAnimation(Animation animation) {
     this.animation = animation;
+  }
+
+  private void registerListeners() {
+    keyListener = new GameKeyListener() {
+      @Override
+      public void onKeyPressed(int keyCode, KeyboardAdapter keyboardAdapter) {
+        GameObject.this.onKeyPressed(keyCode, keyboardAdapter);
+      }
+
+      @Override
+      public void onKeyReleased(int keyCode, KeyboardAdapter keyboardAdapter) {
+        GameObject.this.onKeyReleased(keyCode, keyboardAdapter);
+      }
+    };
+    getGame().getKeyboardAdapter().addListener(keyListener);
   }
 }

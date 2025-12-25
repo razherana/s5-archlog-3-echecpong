@@ -1,5 +1,8 @@
 package mg.razherana.game.logic.objects.ui;
 
+import java.awt.AlphaComposite;
+import java.awt.Graphics2D;
+
 import mg.razherana.game.Game;
 import mg.razherana.game.logic.GameObject;
 import mg.razherana.game.logic.utils.Vector2;
@@ -47,6 +50,10 @@ public abstract class AbstractUIFade extends GameObject {
       // Remove this UI element from the game
       getGame().removeGameObject(this);
     }
+  }
+
+  public void setAlpha(Graphics2D g2d) {
+    g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
   }
 
   /**

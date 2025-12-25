@@ -70,12 +70,16 @@ public class Animation {
     this.margins = margins;
   }
 
-  public void update(float deltaTime) {
+  public void update(double deltaTime) {
     currentAnimationTimer += deltaTime;
     if (currentAnimationTimer >= animationFrameDuration) {
-      currentAnimationFrame = (currentAnimationFrame + 1) % animationAssets.length;
+      currentAnimationFrame = (currentAnimationFrame + 1) % getAnimationLength();
       currentAnimationTimer = 0f;
     }
+  }
+
+  protected int getAnimationLength() {
+    return animationAssets.length;
   }
 
   public void render(Graphics2D g2d, Vector2 position, Vector2 size) {
@@ -162,7 +166,7 @@ public class Animation {
   protected int[] getCurrentMargins() {
     int[] currentMargins = null;
 
-    if (margins == null && margins.length == 0)
+    if (margins == null || margins.length == 0)
       currentMargins = new int[] { 0, 0, 0, 0 };
     else if (margins.length == 1)
       currentMargins = new int[] { margins[0], margins[0], margins[0], margins[0] };

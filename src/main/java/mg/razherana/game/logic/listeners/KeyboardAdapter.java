@@ -4,6 +4,7 @@ import java.util.List;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -14,7 +15,7 @@ public class KeyboardAdapter extends KeyAdapter {
 
   private final Game game;
 
-  private final List<GameKeyListener> gameKeyListeners = new ArrayList<>();
+  private final List<GameKeyListener> gameKeyListeners = Collections.synchronizedList(new ArrayList<>());
 
   private final Object keysLock = new Object();
 
@@ -28,7 +29,7 @@ public class KeyboardAdapter extends KeyAdapter {
   }
 
   @Override
-  public void keyPressed(KeyEvent e) {
+  public synchronized void keyPressed(KeyEvent e) {
     keys.add(e.getKeyCode());
 
     synchronized (gameKeyListenersLock) {

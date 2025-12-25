@@ -1,6 +1,5 @@
 package mg.razherana.game.logic.objects.ui;
 
-import java.awt.AlphaComposite;
 import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
 
@@ -21,7 +20,7 @@ public class UILifeFade extends AbstractUIFade {
 
   @Override
   public void render(Graphics2D g2d) {
-    g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+    setAlpha(g2d);
 
     // Set outer rectangle
     g2d.setColor(java.awt.Color.BLACK);
