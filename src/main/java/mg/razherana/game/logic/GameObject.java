@@ -11,7 +11,7 @@ import mg.razherana.game.logic.animations.Animation;
 import mg.razherana.game.logic.listeners.GameKeyListener;
 import mg.razherana.game.logic.listeners.KeyboardAdapter;
 import mg.razherana.game.logic.timers.GameObjectTimer;
-import mg.razherana.game.logic.timers.OnceGameObjectTimer;
+import mg.razherana.game.logic.timers.NthGameObjectTimer;
 import mg.razherana.game.logic.utils.Vector2;
 
 public abstract class GameObject {
@@ -41,14 +41,18 @@ public abstract class GameObject {
     registerListeners();
   }
 
-  public <T extends GameObject> void addOnceTimer(Consumer<T> consumer, final float endTime) {
-    timerList.add(new OnceGameObjectTimer<GameObject>(this, endTime) {
+  public <T extends GameObject> void addNthTimer(Consumer<T> consumer, final float endTime, final int limit) {
+    timerList.add(new NthGameObjectTimer<GameObject>(this, endTime, limit) {
       @SuppressWarnings("unchecked")
       @Override
       protected void onTick() {
         consumer.accept((T) GameObject.this);
       }
     });
+  }
+
+  public <T extends GameObject> void addOnceTimer(Consumer<T> consumer, final float endTime) {
+    addNthTimer(consumer, endTime, 1);
   }
 
   public <T extends GameObject> void addTimer(GameObjectTimer<T> onceGameObjectTimer) {

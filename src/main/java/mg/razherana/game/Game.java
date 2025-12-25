@@ -965,7 +965,7 @@ public class Game {
         // Check for game over condition
         checkGameOver();
 
-        System.gc();
+        // System.gc();
       }
     }
   }
