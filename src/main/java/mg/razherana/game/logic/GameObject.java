@@ -4,6 +4,7 @@ import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
 
 import mg.razherana.game.Game;
+import mg.razherana.game.logic.animations.Animation;
 import mg.razherana.game.logic.listeners.GameKeyListener;
 import mg.razherana.game.logic.listeners.KeyboardAdapter;
 import mg.razherana.game.logic.utils.Vector2;
@@ -14,6 +15,8 @@ public abstract class GameObject {
   private boolean collision = true;
 
   private final Game game;
+
+  private Animation animation;
 
   private final int priority;
   private GameKeyListener keyListener;
@@ -75,6 +78,30 @@ public abstract class GameObject {
    */
   public void onCollision(GameObject other) {
     // Default implementation does nothing
+  }
+
+  /**
+   * Method to run the update method of the animation.
+   * <p>
+   * This method should be ran in the update method.
+   * </p>
+   * 
+   * @param deltaTime
+   */
+  public void updateAnimation(float deltaTime) {
+    getAnimation().update(deltaTime);
+  }
+
+  /**
+   * Method to run the render method of the animation.
+   * <p>
+   * This method should be ran in the render method.
+   * </p>
+   * 
+   * @param g2d
+   */
+  public void renderAnimation(Graphics2D g2d) {
+    getAnimation().render(g2d, position, size);
   }
 
   /**
@@ -160,5 +187,19 @@ public abstract class GameObject {
    */
   public void setCollision(boolean collision) {
     this.collision = collision;
+  }
+
+  /**
+   * @return the animation
+   */
+  public Animation getAnimation() {
+    return animation;
+  }
+
+  /**
+   * @param animation the animation to set
+   */
+  public void setAnimation(Animation animation) {
+    this.animation = animation;
   }
 }

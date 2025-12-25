@@ -18,7 +18,7 @@ public class Ball extends GameObject {
   public static final int RADIUS = 15;
   public static final float DIAMETER = RADIUS * 2;
 
-  static final float ANIMATION_FRAME_DURATION = 0.05f; // Duration of each frame in seconds
+  static final float ANIMATION_FRAME_DURATION = 0.075f; // Duration of each frame in seconds
   Vector2 velocity = new Vector2(0, 0);
 
   Vector2 baseVelocity;
@@ -224,6 +224,15 @@ public class Ball extends GameObject {
       velocity.x = baseVelocity.x * randomFactorX;
       velocity.y = baseVelocity.y * randomFactorY;
     }
+
+    // // Testing the draw string
+    // if(Math.random() < 0.1) {
+    // System.out.println("[Ball/Collision] Ball position after collision: " +
+    // getPosition().toString());
+    // // Add UI
+    // // getGame().addGameObject(new UIScreenTextScaleFade(getGame(), new
+    // Vector2(200, 200), new Vector2(350, 150), 5, 0.7f, 1.3f, "Teste", 50));
+    // }
   }
 
   public Vector2 getVelocity() {

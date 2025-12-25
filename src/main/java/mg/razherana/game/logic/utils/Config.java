@@ -36,29 +36,29 @@ public class Config {
   }
 
   public String getProperty(String key) {
-    try {
-      String encodedName = URLEncoder.encode(key, StandardCharsets.UTF_8.toString());
-      String url = baseUrl + "?name=" + encodedName;
+    // try {
+    //   String encodedName = URLEncoder.encode(key, StandardCharsets.UTF_8.toString());
+    //   String url = baseUrl + "?name=" + encodedName;
 
-      HttpRequest request = HttpRequest.newBuilder()
-          .uri(URI.create(url))
-          .timeout(Duration.ofSeconds(5))
-          .GET()
-          .build();
+    //   HttpRequest request = HttpRequest.newBuilder()
+    //       .uri(URI.create(url))
+    //       .timeout(Duration.ofSeconds(5))
+    //       .GET()
+    //       .build();
 
-      HttpResponse<String> response = httpClient.send(
-          request, HttpResponse.BodyHandlers.ofString());
+    //   HttpResponse<String> response = httpClient.send(
+    //       request, HttpResponse.BodyHandlers.ofString());
 
-      if (response.statusCode() == 200) {
-        System.out.println("[Config/API] : " + key + "=" + response.body().trim());
-        return response.body().trim();
-      } else {
-        System.err.println("API request failed with status: " + response.statusCode());
-      }
-    } catch (Exception e) {
-      System.err.println("Failed to fetch from API for key: " + key);
-      e.printStackTrace();
-    }
+    //   if (response.statusCode() == 200) {
+    //     System.out.println("[Config/API] : " + key + "=" + response.body().trim());
+    //     return response.body().trim();
+    //   } else {
+    //     System.err.println("API request failed with status: " + response.statusCode());
+    //   }
+    // } catch (Exception e) {
+    //   System.err.println("Failed to fetch from API for key: " + key);
+    //   e.printStackTrace();
+    // }
 
     // Fallback to local properties
     System.out.println("[Config/Properties] : Failed and local : " + key + "=" + properties.getProperty(key));

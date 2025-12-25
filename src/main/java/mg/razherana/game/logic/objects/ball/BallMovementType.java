@@ -5,7 +5,7 @@ import java.awt.image.BufferedImage;
 
 import mg.razherana.game.logic.utils.Assets;
 
-public enum BallMovementType {
+enum BallMovementType {
   LEFT_TO_RIGHT(new BallAsset[] {
       new BallAsset(0, 0),
       new BallAsset(1, 0),
