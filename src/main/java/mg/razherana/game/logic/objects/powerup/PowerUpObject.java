@@ -5,6 +5,7 @@ import java.awt.Graphics2D;
 import mg.razherana.game.Game;
 import mg.razherana.game.logic.GameObject;
 import mg.razherana.game.logic.utils.Vector2;
+import mg.razherana.game.net.packets.PowerUpPacket.PacketPowerUpDTO;
 
 abstract public class PowerUpObject<T extends GameObject> extends GameObject {
 
@@ -59,5 +60,20 @@ abstract public class PowerUpObject<T extends GameObject> extends GameObject {
    */
   protected boolean isTarget(GameObject gameObject) {
     return targetClass.isInstance(gameObject);
+  }
+
+  /**
+   * Additional information to put in the powerup packet
+   * 
+   * @return
+   */
+  public String getMultiplayerAdditionalInformation() {
+    // Empty by default
+    return "";
+  }
+
+  public void updateFromPacket(PacketPowerUpDTO packetPowerUpDTO) {
+    // Position by default
+    setPosition(new Vector2(packetPowerUpDTO.x(), packetPowerUpDTO.y()));
   }
 }

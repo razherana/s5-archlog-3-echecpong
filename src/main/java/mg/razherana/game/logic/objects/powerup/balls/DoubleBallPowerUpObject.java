@@ -65,4 +65,9 @@ public class DoubleBallPowerUpObject extends PowerUpObject<Ball> {
 
     getGame().removeGameObject(this);
   }
+
+  @Override
+  public String getMultiplayerAdditionalInformation() {
+    return getAnimation().getCurrentAnimationFrame() + ";" + getAnimation().getCurrentAnimationTimer();
+  }
 }

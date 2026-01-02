@@ -17,6 +17,7 @@ import mg.razherana.game.net.packets.GameStatePacket;
 import mg.razherana.game.net.packets.LoginPacket;
 import mg.razherana.game.net.packets.Packet;
 import mg.razherana.game.net.packets.PacketType;
+import mg.razherana.game.net.packets.PowerUpPacket;
 import mg.razherana.game.net.packets.RandomMovementPacket;
 import mg.razherana.game.net.packets.MovementsPacket;
 import mg.razherana.game.net.packets.SnapshotPacket;
@@ -30,6 +31,7 @@ public class Server extends Thread {
   private ArrayList<PlayerMP> connectedPlayers = new ArrayList<>();
 
   private volatile boolean running = false;
+  private ScheduledFuture<?> powerUpThread;
 
   public Server(Game game) {
     this.game = game;
@@ -48,18 +50,27 @@ public class Server extends Thread {
   }
 
   public void sendRandomMovementToAllClients() {
+    // System.out.println("[MP/Server] : Sending random movement packet");
     RandomMovementPacket movementPacket = new RandomMovementPacket(game);
-    sendDataToAllClients(movementPacket.getData());
+    sendDataToAllClients(movementPacket.getData(), true);
   }
 
   public void sendMovementsSnapshotToAllClients() {
+    // System.out.println("[MP/Server] : Sending movements snapshot packet");
     MovementsPacket movementsPacket = new MovementsPacket(game);
-    sendDataToAllClients(movementsPacket.getData());
+    sendDataToAllClients(movementsPacket.getData(), true);
   }
 
   public void sendSnapshotToAllClients() {
+    // System.out.println("[MP/Server] : Sending global snapshot packet");
     SnapshotPacket snapshotPacket = new SnapshotPacket(game);
-    sendDataToAllClients(snapshotPacket.getData());
+    sendDataToAllClients(snapshotPacket.getData(), true);
+  }
+
+  public void sendPowerUpToAllClients() {
+    // System.out.println("[MP/Server] : Sending powerup packet");
+    PowerUpPacket powerUpPacket = new PowerUpPacket(game);
+    sendDataToAllClients(powerUpPacket.getData(), true);
   }
 
   public boolean isRunning() {
@@ -87,6 +98,9 @@ public class Server extends Thread {
     randomMovementThread = MPThreading.generateServerThread(this, Config.Key.SERVER_RANDOM_RATE,
         this::sendRandomMovementToAllClients);
 
+    powerUpThread = MPThreading.generateServerThread(this, Config.Key.SERVER_POWERUP_RATE,
+        this::sendPowerUpToAllClients);
+
     System.out.println("[MP/Server] : Server started on port " + socket.getLocalPort());
 
     while (running) {
@@ -105,14 +119,18 @@ public class Server extends Thread {
     }
   }
 
-  public void addConnection(PlayerMP playerMP, LoginPacket loginPacket) {
+  public void addConnection(PlayerMP connectingPlayer, LoginPacket loginPacket, boolean isClientServer) {
     boolean alreadyConnected = false;
 
     for (PlayerMP player : connectedPlayers) {
-      if (player.getIpAddress() == null && player.getPort() == -1) {
+      if (player.getIpAddress() == null && player.getPort() == -1 && !player.clientServerConnected) {
         // Set IP address and port
-        player.setPort(playerMP.getPort());
-        player.setIpAddress(playerMP.getIpAddress());
+        if (!isClientServer) {
+          player.setPort(connectingPlayer.getPort());
+          player.setIpAddress(connectingPlayer.getIpAddress());
+        } else {
+          player.clientServerConnected = true;
+        }
 
         alreadyConnected = true;
       } else {
@@ -121,7 +139,7 @@ public class Server extends Thread {
         // Rehefa tafiditra
         LoginPacket loginPacket2 = new LoginPacket(player.getName(), player.getWhiteOrBlack(), player.getPrimaryColor(),
             player.getSecondaryColor());
-        sendData(loginPacket2.getData(), playerMP.getIpAddress(), playerMP.getPort());
+        sendData(loginPacket2.getData(), connectingPlayer.getIpAddress(), connectingPlayer.getPort());
       }
     }
 
@@ -129,7 +147,10 @@ public class Server extends Thread {
 
     if (!alreadyConnected) {
       i = 1;
-      connectedPlayers.add(playerMP);
+      connectedPlayers.add(connectingPlayer);
+      if (isClientServer) {
+        connectingPlayer.clientServerConnected = true;
+      }
     }
 
     // Modify the login packet to set the correct whiteOrBlack
@@ -139,10 +160,12 @@ public class Server extends Thread {
         loginPacket.getColor1(), loginPacket.getColor2());
 
     // Send login packet to the new player
-    sendData(modifiedLoginPacket.getData(), playerMP.getIpAddress(), playerMP.getPort());
+    sendData(modifiedLoginPacket.getData(), connectingPlayer.getIpAddress(), connectingPlayer.getPort());
   }
 
   public void parsePacket(byte[] data, InetAddress address, int port) {
+    boolean isClientServer = address == null && port == -1;
+
     String message = new String(data).trim();
 
     if (message.length() < 2) {
@@ -154,7 +177,7 @@ public class Server extends Thread {
 
     switch (packetType) {
       case LOGIN:
-        System.out.println("[MP/Server] : Login packet received. Handling ...");
+        System.out.println("[MP/Server] : Login packet received. Handling ... Is client server? = " + isClientServer);
 
         LoginPacket loginPacket = new LoginPacket(data);
 
@@ -175,11 +198,11 @@ public class Server extends Thread {
 
         game.initPlayerAndObjects(
             playerMP,
-            (connectedPlayers.size() + 1) % 2, false);
+            (connectedPlayers.size() + 1) % 2, isClientServer);
 
         game.getPlayers().add(playerMP);
 
-        addConnection(playerMP, loginPacket);
+        addConnection(playerMP, loginPacket, isClientServer);
 
         break;
 
@@ -214,8 +237,9 @@ public class Server extends Thread {
       return;
     }
 
-    System.out.println("[MP/Server] : Sending packet to " + ipAddress.getHostAddress() + ":" + port + " via server: "
-        + new String(data));
+    // System.out.println("[MP/Server] : Sending packet to " +
+    // ipAddress.getHostAddress() + ":" + port + " via server: "
+    // + new String(data));
 
     DatagramPacket packet = new DatagramPacket(data, data.length, ipAddress, port);
     try {
@@ -225,9 +249,17 @@ public class Server extends Thread {
     }
   }
 
-  public void sendDataToAllClients(byte[] data) {
-    for (PlayerMP playerMP : connectedPlayers)
+  public void sendDataToAllClients(byte[] data, boolean ignoreClientServer) {
+    for (PlayerMP playerMP : connectedPlayers) {
+      if (playerMP.getIpAddress() == null && playerMP.getPort() == -1 && ignoreClientServer)
+        continue;
+
       sendData(data, playerMP.getIpAddress(), playerMP.getPort());
+    }
+  }
+
+  public void sendDataToAllClients(byte[] data) {
+    sendDataToAllClients(data, false);
   }
 
   public void stopServer() {
@@ -239,6 +271,7 @@ public class Server extends Thread {
       snapshotThread.cancel(true);
       randomMovementThread.cancel(true);
       platformThread.cancel(true);
+      powerUpThread.cancel(true);
 
       this.interrupt();
 

@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.JColorChooser;
+import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
@@ -27,10 +28,12 @@ import mg.razherana.game.logic.objects.board.BoardBorder;
 import mg.razherana.game.logic.objects.chesspiece.ChessPiece;
 import mg.razherana.game.logic.objects.chesspiece.ChessPieceType;
 import mg.razherana.game.logic.objects.platform.Platform;
+import mg.razherana.game.logic.objects.powerup.balls.DoubleBallPowerUpObject;
 import mg.razherana.game.logic.players.Player;
 import mg.razherana.game.logic.utils.Assets;
 import mg.razherana.game.logic.utils.Config;
 import mg.razherana.game.logic.utils.RandomGen;
+import mg.razherana.game.logic.utils.Save;
 import mg.razherana.game.logic.utils.Vector2;
 import mg.razherana.game.net.Client;
 import mg.razherana.game.net.PlayerMP;
@@ -40,6 +43,7 @@ import mg.razherana.game.net.packets.LoginPacket;
 import mg.razherana.game.net.packets.MovementsPacket;
 import mg.razherana.game.net.packets.SnapshotPacket;
 import mg.razherana.game.net.packets.MovementsPacket.PlatformDTO;
+import mg.razherana.game.net.packets.PowerUpPacket;
 
 /**
  * Contains the game instance and logic.
@@ -516,21 +520,12 @@ public class Game {
     LoginPacket loginPacket = new LoginPacket(username, -1, primaryColor, secondaryColor);
 
     if (isServerRunning()) {
-      initPlayerAndObjects(playerMP, (server.getConnectedPlayers().size() + 1) % 2, true);
-
       setMultiplayer(true);
 
       server.parsePacket(
           new LoginPacket(username, (server.getConnectedPlayers().size() + 1) % 2, primaryColor, secondaryColor)
               .getData(),
           null, -1);
-
-      // Add to server
-      server.addConnection(playerMP, new LoginPacket(username, 1, primaryColor, secondaryColor));
-
-      synchronized (gameObjectsLock) {
-        getPlayers().add(playerMP);
-      }
 
       return;
     }
@@ -812,6 +807,91 @@ public class Game {
         restartAfterGameOver();
     }
 
+  }
+
+  public void saveGame() {
+    // Open a file chooser dialog to select save location
+    JFileChooser fileChooser = new JFileChooser(".");
+    int userSelection = fileChooser.showSaveDialog(null);
+
+    if (userSelection == JFileChooser.APPROVE_OPTION) {
+      try {
+        // Get the selected file
+        var fileToSave = fileChooser.getSelectedFile();
+
+        // Serialize game state and write to file
+
+        new Save(this).saveToPropertiesFile(fileToSave.getAbsolutePath());
+
+        System.out.println("Game saved to: " + fileToSave.getAbsolutePath());
+      } catch (Exception e) {
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(gamePanel, "Failed to save game: " + e.getMessage(), "Error",
+            JOptionPane.ERROR_MESSAGE);
+      }
+    }
+  }
+
+  public void loadGame() {
+    // Open a file chooser dialog to select save file location
+    JFileChooser fileChooser = new JFileChooser(".");
+    int userSelection = fileChooser.showOpenDialog(null);
+    if (userSelection == JFileChooser.APPROVE_OPTION) {
+      try {
+        // Get the selected file
+        var fileToLoad = fileChooser.getSelectedFile();
+
+        // Load game state from file
+        Save load = Save.loadFromPropertiesFile(fileToLoad.getAbsolutePath());
+
+        load.loadIntoGame(this);
+
+        System.out.println("Game loaded from: " + fileToLoad.getAbsolutePath());
+      } catch (Exception e) {
+        JOptionPane.showMessageDialog(gamePanel, "Failed to load game: " + e.getMessage(), "Error",
+            JOptionPane.ERROR_MESSAGE);
+        e.printStackTrace();
+      }
+    }
+  }
+
+  public void startOtherInstance() {
+    SwingUtilities.invokeLater(() -> {
+      new Game();
+    });
+  }
+
+  public void setPowerUps(PowerUpPacket packet) {
+    synchronized (gameObjectsLock) {
+      packet.getPowerUps().forEach((powerUpDTO) -> {
+        // Check if the object with the id exists
+        var powerUp = getGameObjects().stream()
+            .filter((obj) -> obj.getId() != null && obj.getId().equals(powerUpDTO.id()))
+            .findAny();
+
+        if (powerUpDTO.simpleClassName()
+            .equals(DoubleBallPowerUpObject.class.getSimpleName())) {
+
+          if (powerUp.isPresent()) {
+            // Update the powerup
+            DoubleBallPowerUpObject powerUpDoubleBall = (DoubleBallPowerUpObject) powerUp.get();
+
+            // Set the data
+            powerUpDoubleBall.updateFromPacket(powerUpDTO);
+          } else {
+            // We need to create it
+            DoubleBallPowerUpObject doubleBallPowerUpObject = new DoubleBallPowerUpObject(this,
+                new Vector2(powerUpDTO.x(), powerUpDTO.y()));
+
+            // Set the id
+            doubleBallPowerUpObject.setId(powerUpDTO.id());
+
+            // Add into game
+            addGameObject(doubleBallPowerUpObject);
+          }
+        }
+      });
+    }
   }
 
   private void initListeners() {

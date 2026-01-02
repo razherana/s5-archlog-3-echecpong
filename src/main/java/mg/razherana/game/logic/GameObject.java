@@ -21,6 +21,8 @@ public abstract class GameObject {
 
   private List<GameObjectTimer<? extends GameObject>> timerList = new ArrayList<>();
 
+  private String id = null;
+
   private final Game game;
 
   private Animation animation;
@@ -39,6 +41,20 @@ public abstract class GameObject {
     this.priority = priority;
 
     registerListeners();
+  }
+
+  /**
+   * @param id the id to set
+   */
+  public void setId(String id) {
+    this.id = id;
+  }
+
+  /**
+   * @return the id
+   */
+  public String getId() {
+    return id;
   }
 
   public <T extends GameObject> void addNthTimer(Consumer<T> consumer, final float endTime, final int limit) {

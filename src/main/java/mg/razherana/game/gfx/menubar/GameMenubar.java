@@ -29,12 +29,31 @@ public class GameMenubar extends JMenuBar {
     // Add exit etc. here
     JMenu fileMenu = new JMenu("File");
     JMenuItem exitItem = new JMenuItem("Exit");
-    
+
     exitItem.addActionListener(e -> {
       game.gracefulExit();
     });
 
+    // Add save/load items here
+    JMenuItem saveItem = new JMenuItem("Save Game");
+    saveItem.addActionListener(e -> {
+      game.saveGame();
+    });
+
+    JMenuItem loadItem = new JMenuItem("Load Game");
+    loadItem.addActionListener(e -> {
+      game.loadGame();
+    });
+
+    JMenuItem startAnotherItem = new JMenuItem("Start Another Instance");
+    startAnotherItem.addActionListener(e -> {
+      game.startOtherInstance();
+    });
+
     fileMenu.add(exitItem);
+    fileMenu.add(startAnotherItem);
+    fileMenu.add(saveItem);
+    fileMenu.add(loadItem);
     this.add(fileMenu);
   }
 

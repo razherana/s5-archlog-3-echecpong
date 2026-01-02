@@ -20,6 +20,7 @@ import mg.razherana.game.net.packets.GameStatePacket;
 import mg.razherana.game.net.packets.LoginPacket;
 import mg.razherana.game.net.packets.Packet;
 import mg.razherana.game.net.packets.PacketType;
+import mg.razherana.game.net.packets.PowerUpPacket;
 import mg.razherana.game.net.packets.RandomMovementPacket;
 import mg.razherana.game.net.packets.MovementsPacket;
 import mg.razherana.game.net.packets.SnapshotPacket;
@@ -38,11 +39,19 @@ public class Client extends Thread {
   private volatile boolean running = false;
   private final int port;
 
+  private boolean isClientServer() {
+    return game.isServerRunning();
+  }
+
   public Client(Game game, String ipAddress, int port, String username, Color primaryColor, Color secondaryColor)
       throws UnknownHostException, SocketException {
     this.game = game;
-    this.ipAddress = InetAddress.getByName(ipAddress);
-    this.socket = new DatagramSocket();
+
+    if (!isClientServer()) {
+      this.ipAddress = InetAddress.getByName(ipAddress);
+      this.socket = new DatagramSocket();
+    }
+
     this.port = port;
     this.username = username;
     this.primaryColor = primaryColor;
@@ -60,7 +69,7 @@ public class Client extends Thread {
       sendData(packet.getData());
     });
 
-    while (running) {
+    while (running && !isClientServer()) {
       byte[] data = new byte[1500];
       DatagramPacket packet = new DatagramPacket(data, data.length);
       try {
@@ -113,6 +122,11 @@ public class Client extends Thread {
         game.setFutureRandoms(((RandomMovementPacket) packet).getRandomMovements());
         break;
 
+      case POWER_UP:
+        packet = new PowerUpPacket(data);
+        game.setPowerUps((PowerUpPacket) packet);
+        break;
+
       case GAME_STATE:
         // Handle game state packet
         packet = new GameStatePacket(data);
@@ -129,6 +143,7 @@ public class Client extends Thread {
   }
 
   private void handleLoginPacket(LoginPacket packet) {
+    System.out.println("[MP/Client] : Got Login packet " + packet.getUsername());
     // Check if the player is myself
     if (packet.getUsername().equals(this.username)) {
       // Set my assigned color (white or black)
@@ -165,6 +180,10 @@ public class Client extends Thread {
   }
 
   public void sendData(byte[] data) {
+    if (isClientServer()) {
+      game.getServer().parsePacket(data, null, -1);
+      return;
+    }
     DatagramPacket packet = new DatagramPacket(data, data.length, ipAddress, port);
     try {
       socket.send(packet);

@@ -6,7 +6,7 @@ import java.util.List;
 
 import mg.razherana.game.Game;
 import mg.razherana.game.logic.GameObject;
-import mg.razherana.game.logic.objects.ui.UILifeFade;
+import mg.razherana.game.logic.objects.ui.UIProgressFade;
 import mg.razherana.game.logic.players.Player;
 import mg.razherana.game.logic.utils.Vector2;
 
@@ -14,7 +14,7 @@ public class ChessPiece extends GameObject {
   // Og is 80
   public static final int TILE = 40;
 
-  private UILifeFade lifeFade;
+  private UIProgressFade lifeFade;
 
   public static List<ChessPiece> initDefaultPieces(Game game, Player player, int whiteOrBlack) {
     if (whiteOrBlack == 1) {
@@ -150,13 +150,13 @@ public class ChessPiece extends GameObject {
       this.lifeMax = 1f;
     }
 
-    float posY = position.y - UILifeFade.HEIGHT - 5;
+    float posY = position.y - UIProgressFade.HEIGHT - 5;
     if (posY < 0)
       posY = position.y + getSize().y + 5;
 
-    lifeFade = new UILifeFade(game,
+    lifeFade = new UIProgressFade(game,
         new Vector2(position.x, posY),
-        new Vector2(TILE, UILifeFade.HEIGHT),
+        new Vector2(TILE, UIProgressFade.HEIGHT),
         1.0f,
         1.0f);
 
@@ -203,6 +203,22 @@ public class ChessPiece extends GameObject {
     this.type = type;
   }
 
+  public float getLife() {
+    return life;
+  }
+
+  public float getLifeMax() {
+    return lifeMax;
+  }
+
+  public void setLife(float life) {
+    this.life = life;
+  }
+
+  public void setLifeMax(float lifeMax) {
+    this.lifeMax = lifeMax;
+  }
+
   public void takeDamage(float damage) {
     life -= damage;
 
@@ -213,13 +229,13 @@ public class ChessPiece extends GameObject {
       if (lifeFade != null)
         getGame().removeGameObject(lifeFade);
 
-      float posY = getPosition().y - UILifeFade.HEIGHT - 5;
+      float posY = getPosition().y - UIProgressFade.HEIGHT - 5;
       if (posY < 0)
         posY = getPosition().y + getSize().y + 5;
 
-      lifeFade = new UILifeFade(getGame(),
+      lifeFade = new UIProgressFade(getGame(),
           new Vector2(getPosition().x, posY),
-          new Vector2(TILE, UILifeFade.HEIGHT),
+          new Vector2(TILE, UIProgressFade.HEIGHT),
           3f,
           0f);
 
@@ -231,13 +247,13 @@ public class ChessPiece extends GameObject {
     } else {
       // Update life fade percentage and reset lifetime
 
-      float posY = getPosition().y - UILifeFade.HEIGHT - 5;
+      float posY = getPosition().y - UIProgressFade.HEIGHT - 5;
       if (posY < 0)
         posY = getPosition().y + getSize().y + 5;
 
-      lifeFade = new UILifeFade(getGame(),
+      lifeFade = new UIProgressFade(getGame(),
           new Vector2(getPosition().x, posY),
-          new Vector2(TILE, UILifeFade.HEIGHT),
+          new Vector2(TILE, UIProgressFade.HEIGHT),
           3f,
           life / lifeMax);
 

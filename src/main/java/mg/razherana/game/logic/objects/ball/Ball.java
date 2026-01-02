@@ -1,5 +1,6 @@
 package mg.razherana.game.logic.objects.ball;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
@@ -14,6 +15,8 @@ import mg.razherana.game.logic.animations.MutlipleStateAnimation;
 import mg.razherana.game.logic.objects.board.BoardBorder;
 import mg.razherana.game.logic.objects.chesspiece.ChessPiece;
 import mg.razherana.game.logic.objects.platform.Platform;
+import mg.razherana.game.logic.objects.powerup.balls.PieceCollisionDoubleDamagePowerUpObject;
+import mg.razherana.game.logic.objects.ui.UIProgressFade;
 import mg.razherana.game.logic.utils.Vector2;
 import mg.razherana.game.logic.utils.Collision;
 import mg.razherana.game.logic.utils.Collision.CollisionSidesResult;
@@ -33,10 +36,19 @@ public class Ball extends GameObject {
   BallMovementType movementType = BallMovementType.IDLE;
 
   private Ellipse2D.Float rest = null;
+  private final float baseDamage;
 
+  // Piece collision double damage power-up progress
+  private float pieceDamagePowerUpProgress = 0f;
+
+  private static final float PIECE_DAMAGE_POWERUP_MAX_PROGRESS = 100f;
+  private static final float PIECE_DAMAGE_POWERUP_STEP_PROGRESS = 25f;
+
+  // Constructor
   public Ball(Game game, Vector2 position, float damage, float speedX, float speedY) {
     super(game, position, 2);
     this.damage = damage;
+    this.baseDamage = damage;
     this.velocity = new Vector2(speedX, speedY);
     this.baseVelocity = new Vector2(speedX, speedY);
 
@@ -69,6 +81,13 @@ public class Ball extends GameObject {
   }
 
   /**
+   * @return the baseDamage
+   */
+  public float getBaseDamage() {
+    return baseDamage;
+  }
+
+  /**
    * @return the damage
    */
   public float getDamage() {
@@ -97,6 +116,21 @@ public class Ball extends GameObject {
     Vector2 newPosition = getPosition().add(velocity.multiply((float) deltaTime));
 
     setPosition(newPosition);
+
+    checkAndActivatePieceCollisionDoubleDamagePowerUp();
+  }
+
+  private void checkAndActivatePieceCollisionDoubleDamagePowerUp() {
+    if (pieceDamagePowerUpProgress >= PIECE_DAMAGE_POWERUP_MAX_PROGRESS) {
+      // Reset progress
+      pieceDamagePowerUpProgress = 0f;
+
+      // Activate the power-up
+      PieceCollisionDoubleDamagePowerUpObject powerUp = new PieceCollisionDoubleDamagePowerUpObject(this);
+      getGame().addGameObject(powerUp);
+
+      System.out.println("[Ball/PowerUp] Activated Piece Collision Double Damage Power-Up!");
+    }
   }
 
   @Override
@@ -194,6 +228,25 @@ public class Ball extends GameObject {
         velocity.x = -velocity.x;
         baseVelocity.x = -baseVelocity.x;
       }
+
+      // Add progress to piece damage power-up
+      if (pieceDamagePowerUpProgress < PIECE_DAMAGE_POWERUP_MAX_PROGRESS) {
+        pieceDamagePowerUpProgress += PIECE_DAMAGE_POWERUP_STEP_PROGRESS;
+        System.out.println("[Ball/Collision] Piece damage power-up progress: " + pieceDamagePowerUpProgress);
+
+        float max = Math.min(PIECE_DAMAGE_POWERUP_MAX_PROGRESS, pieceDamagePowerUpProgress);
+        float percentage = (max / PIECE_DAMAGE_POWERUP_MAX_PROGRESS);
+        System.out.println("[Ball/Collision] Piece damage power-up progress percentage: " + (percentage * 100f) + "%");
+
+        // Show progress UI
+        var progressPosition = getPosition().add(new Vector2(-10, -20));
+        var progressUI = new UIProgressFade(getGame(), progressPosition, new Vector2(DIAMETER + 4, 5), .75f,
+            percentage, Color.BLACK, Color.YELLOW);
+
+        getGame().addGameObject(progressUI);
+
+        checkAndActivatePieceCollisionDoubleDamagePowerUp();
+      }
     }
 
     // Check if platform
@@ -244,6 +297,14 @@ public class Ball extends GameObject {
 
   public Vector2 getVelocity() {
     return velocity;
+  }
+
+  public Vector2 getBaseVelocity() {
+    return baseVelocity;
+  }
+
+  public void setBaseVelocity(Vector2 baseVelocity) {
+    this.baseVelocity = baseVelocity;
   }
 
 }

@@ -10,6 +10,7 @@ import mg.razherana.game.logic.players.Player;
 public class PlayerMP extends Player {
   private InetAddress ipAddress;
   private int port;
+  boolean clientServerConnected = false;
 
   public PlayerMP(String name, Color primaryColor, Color secondaryColor, List<ChessPiece> chessPieces,
       InetAddress ipAddress, int port) {
